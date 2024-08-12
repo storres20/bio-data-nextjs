@@ -1,38 +1,31 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-
 ![image](https://github.com/user-attachments/assets/0f3cbb55-82b9-4c1e-896e-c806765127a9)
 
-## Getting Started
+# Real-Time Temperature and Humidity Monitoring System
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This project is a real-time temperature and humidity monitoring system built with a Node.js backend and a Next.js frontend. Data is collected from a DHT11 sensor connected to an ESP8266 NodeMCU and is sent to the backend server, which stores the data in a MongoDB database. The frontend retrieves and displays this data using dynamic, auto-updating graphs.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- **Real-Time Monitoring:** Temperature and humidity data are updated on the frontend every 0.5 seconds.
+- **Responsive Design:** The frontend is responsive, with charts displayed side-by-side on larger screens and stacked vertically on mobile devices.
+- **Data Storage:** The backend stores sensor data in a MongoDB database.
+- **Secure Communication:** Data is sent from the ESP8266 to the backend using HTTPS.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Tech Stack
 
-## Learn More
+### Backend (Node.js)
+- **Express.js:** For handling API routes.
+- **Mongoose:** For interacting with MongoDB.
+- **CORS:** To allow cross-origin requests.
+- **dotenv:** For managing environment variables.
 
-To learn more about Next.js, take a look at the following resources:
+### Frontend (Next.js)
+- **React.js:** For building the user interface.
+- **Chart.js and react-chartjs-2:** For rendering dynamic graphs.
+- **Tailwind CSS:** For styling the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### IoT Device
+- **ESP8266 NodeMCU:** For collecting temperature and humidity data and sending it to the backend server.
+- **DHT11 Sensor:** For measuring temperature and humidity.
