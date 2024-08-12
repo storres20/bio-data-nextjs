@@ -28,7 +28,7 @@ export default function Home() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 500); // Fetch data every X seconds
+        const interval = setInterval(fetchData, 500); // Fetch data every 0.5 seconds
 
         return () => clearInterval(interval); // Cleanup interval on component unmount
     }, []);
@@ -62,11 +62,11 @@ export default function Home() {
     return (
         <div className="flex flex-col items-center">
             <h1 className="text-2xl font-bold mb-4">Real-Time Temperature and Humidity</h1>
-            <div className="flex justify-between w-full max-w-4xl">
-                <div className="w-1/2 pr-2">
+            <div className="flex flex-col md:flex-row justify-between w-full max-w-4xl">
+                <div className="w-full md:w-1/2 md:pr-2 mb-4 md:mb-0">
                     <Line data={temperatureChartData} />
                 </div>
-                <div className="w-1/2 pl-2">
+                <div className="w-full md:w-1/2 md:pl-2">
                     <Line data={humidityChartData} />
                 </div>
             </div>
