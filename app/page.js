@@ -9,6 +9,7 @@ export default function Home() {
     const [humidityData, setHumidityData] = useState([]);
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
+    const [warningMessage, setWarningMessage] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,9 +26,30 @@ export default function Home() {
                 setHumidityData(hum);
                 setDsTemperatureData(dsTemp);
                 setLabels(timeLabels);
+
+                // Check for warnings
+                checkForWarnings(temp[temp.length - 1], hum[hum.length - 1], dsTemp[dsTemp.length - 1]);
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
+        };
+
+        const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
+            let message = '';
+
+            if (latestTemp > 25) {
+                message += `Warning: Temperature (${latestTemp}°C) is higher than 25°C. `;
+            }
+
+            if (latestDsTemp > 25) {
+                message += `Warning: DS18B20 Temperature (${latestDsTemp}°C) is higher than 25°C. `;
+            }
+
+            if (latestHum > 90) {
+                message += `Warning: Humidity (${latestHum}%) is higher than 90%. `;
+            }
+
+            setWarningMessage(message);
         };
 
         fetchData();
@@ -75,7 +97,6 @@ export default function Home() {
         ],
     };
 
-    // Add a function to handle the delete action
     const deleteAllData = async () => {
         try {
             const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas', {
@@ -92,6 +113,12 @@ export default function Home() {
     return (
         <div className="flex flex-col items-center h-screen">
             <h1 className="text-2xl font-bold my-4">Real-Time Sensor Data</h1>
+
+            {warningMessage && (
+                <div className="bg-yellow-300 text-yellow-800 p-4 mb-4 rounded">
+                    {warningMessage}
+                </div>
+            )}
 
             <button onClick={deleteAllData}
                     className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
