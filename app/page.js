@@ -75,18 +75,38 @@ export default function Home() {
         ],
     };
 
+    // Add a function to handle the delete action
+    const deleteAllData = async () => {
+        try {
+            const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas', {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            alert(result.message); // Alert the user with the response message
+        } catch (error) {
+            console.error('Failed to delete data:', error);
+            alert('Failed to delete data');
+        }
+    };
+
     return (
         <div className="flex flex-col items-center h-screen">
             <h1 className="text-2xl font-bold my-4">Real-Time Sensor Data</h1>
+
+            <button onClick={deleteAllData}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                Delete All Data
+            </button>
+
             <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
                 <div className="row-span-1 h-full">
-                    <Line data={temperatureChartData} options={{ maintainAspectRatio: false }} />
+                    <Line data={temperatureChartData} options={{maintainAspectRatio: false}}/>
                 </div>
                 <div className="row-span-1 h-full">
-                    <Line data={humidityChartData} options={{ maintainAspectRatio: false }} />
+                    <Line data={humidityChartData} options={{maintainAspectRatio: false}}/>
                 </div>
                 <div className="row-span-1 h-full">
-                    <Line data={dsTemperatureChartData} options={{ maintainAspectRatio: false }} />
+                    <Line data={dsTemperatureChartData} options={{maintainAspectRatio: false}}/>
                 </div>
             </div>
         </div>
