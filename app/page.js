@@ -7,6 +7,7 @@ import 'chart.js/auto';
 export default function Home() {
     const [temperatureData, setTemperatureData] = useState([]);
     const [humidityData, setHumidityData] = useState([]);
+    const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
 
     useEffect(() => {
@@ -17,10 +18,12 @@ export default function Home() {
 
                 const temp = data.map(entry => entry.temperature);
                 const hum = data.map(entry => entry.humidity);
+                const dsTemp = data.map(entry => entry.dsTemperature);
                 const timeLabels = data.map((_, index) => `T-${data.length - index}`);
 
                 setTemperatureData(temp);
                 setHumidityData(hum);
+                setDsTemperatureData(dsTemp);
                 setLabels(timeLabels);
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -59,15 +62,31 @@ export default function Home() {
         ],
     };
 
+    const dsTemperatureChartData = {
+        labels: labels,
+        datasets: [
+            {
+                label: 'DS18B20 Temperature (°C)',
+                data: dsTemperatureData,
+                fill: false,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.1,
+            },
+        ],
+    };
+
     return (
-        <div className="flex flex-col items-center">
-            <h1 className="text-2xl font-bold mb-4">Real-Time Temperature and Humidity</h1>
-            <div className="flex flex-col md:flex-row justify-between w-full max-w-4xl">
-                <div className="w-full md:w-1/2 md:pr-2 mb-4 md:mb-0">
-                    <Line data={temperatureChartData} />
+        <div className="flex flex-col items-center h-screen">
+            <h1 className="text-2xl font-bold my-4">Real-Time Sensor Data</h1>
+            <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
+                <div className="row-span-1 h-full">
+                    <Line data={temperatureChartData} options={{ maintainAspectRatio: false }} />
                 </div>
-                <div className="w-full md:w-1/2 md:pl-2">
-                    <Line data={humidityChartData} />
+                <div className="row-span-1 h-full">
+                    <Line data={humidityChartData} options={{ maintainAspectRatio: false }} />
+                </div>
+                <div className="row-span-1 h-full">
+                    <Line data={dsTemperatureChartData} options={{ maintainAspectRatio: false }} />
                 </div>
             </div>
         </div>
