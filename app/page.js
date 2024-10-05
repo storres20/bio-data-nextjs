@@ -14,19 +14,18 @@ export default function Home() {
     const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]); // Separate datetime for tooltips
 
-    useEffect(() => {
-        // Fetch unique usernames for the dropdown
-        const fetchUsernames = async () => {
-            try {
-                const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas/usernames');
-                const data = await response.json();
-                setUsernames(data);
-                console.log(data)
-            } catch (error) {
-                console.error('Error fetching usernames:', error);
-            }
-        };
+    // Function to fetch usernames
+    const fetchUsernames = async () => {
+        try {
+            const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas/usernames');
+            const data = await response.json();
+            setUsernames(data);
+        } catch (error) {
+            console.error('Error fetching usernames:', error);
+        }
+    };
 
+    useEffect(() => {
         fetchUsernames();
     }, []);
 
@@ -153,6 +152,7 @@ export default function Home() {
         },
     };
 
+    // Delete all data for a specific user
     const deleteAllData = async (user) => {
         try {
             const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/${user}`, {
@@ -160,6 +160,10 @@ export default function Home() {
             });
             const result = await response.json();
             alert(result.message); // Alert the user with the response message
+
+            // Reset selected username and refetch the list of usernames
+            setSelectedUsername(''); // Reset selected username to the default value
+            await fetchUsernames();  // Refetch usernames to update the list
         } catch (error) {
             console.error('Failed to delete data:', error);
             alert('Failed to delete data');
@@ -203,7 +207,7 @@ export default function Home() {
             {selectedUsername ? (
                 <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
                     <div className="row-span-1 h-64">
-                    <Line data={temperatureChartData} options={chartOptions} />
+                        <Line data={temperatureChartData} options={chartOptions} />
                     </div>
                     <div className="row-span-1 h-64">
                         <Line data={humidityChartData} options={chartOptions} />
