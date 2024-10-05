@@ -1,86 +1,93 @@
-'use client';
+'use client'
 
 import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
-import 'chartjs-adapter-date-fns'; // For datetime support in Chart.js
-import { es } from 'date-fns/locale'; // For locale
 
 export default function Home() {
-    const [users, setUsers] = useState([]); // List of users
-    const [selectedUser, setSelectedUser] = useState(null); // Currently selected user
     const [temperatureData, setTemperatureData] = useState([]);
     const [humidityData, setHumidityData] = useState([]);
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [intervalId, setIntervalId] = useState(null);
+    const [usernames, setUsernames] = useState([]); // Initialize as an empty array
+    const [selectedUsername, setSelectedUsername] = useState('');
+    const [datetimeLabels, setDatetimeLabels] = useState([]); // Separate datetime for tooltips
 
     useEffect(() => {
-        // Fetch list of users and their username
-        const fetchUsers = async () => {
+        // Fetch unique usernames for the dropdown
+        const fetchUsernames = async () => {
             try {
                 const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas/usernames');
                 const data = await response.json();
-                setUsers(data); // Assuming your backend sends an array of users with 'username'
+                setUsernames(data);
+                console.log(data)
             } catch (error) {
-                console.error('Error fetching users:', error);
+                console.error('Error fetching usernames:', error);
             }
         };
 
-        fetchUsers();
+        fetchUsernames();
     }, []);
 
     useEffect(() => {
-        if (intervalId) clearInterval(intervalId); // Clear any previous interval to avoid conflicts
-        if (selectedUser) {
-            const fetchData = async () => {
-                try {
-                    const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas?user=${selectedUser}`);
-                    const data = await response.json();
+        if (!selectedUsername) return;
 
-                    const temp = data.map(entry => entry.temperature);
-                    const hum = data.map(entry => entry.humidity);
-                    const dsTemp = data.map(entry => entry.dsTemperature);
-                    const timeLabels = data.map(entry => new Date(entry.datetime)); // Use 'datetime' field for labels
+        const fetchData = async () => {
+            try {
+                const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/username/${selectedUsername}`);
+                const data = await response.json();
 
-                    setTemperatureData(temp);
-                    setHumidityData(hum);
-                    setDsTemperatureData(dsTemp);
-                    setLabels(timeLabels);
+                const temp = data.map(entry => entry.temperature);
+                const hum = data.map(entry => entry.humidity);
+                const dsTemp = data.map(entry => entry.dsTemperature);
 
+                // Generate "T-1", "T-2", ... labels based on the number of data points
+                const timeLabels = data.map((_, index) => `T-${index + 1}`);
+                // Store the datetime for use in the tooltips
+                const datetimeLabels = data.map(entry => new Date(entry.datetime).toLocaleString('en-GB', {
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                }));
+
+                setTemperatureData(temp);
+                setHumidityData(hum);
+                setDsTemperatureData(dsTemp);
+                setLabels(timeLabels);
+                setDatetimeLabels(datetimeLabels); // Set datetime for tooltips
+
+                // Check for warnings
+                if (temp.length > 0 && hum.length > 0 && dsTemp.length > 0) {
                     checkForWarnings(temp[temp.length - 1], hum[hum.length - 1], dsTemp[dsTemp.length - 1]);
-                } catch (error) {
-                    console.error('Error fetching data:', error);
                 }
-            };
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
 
-            // Initial data fetch and set up polling for real-time updates
-            fetchData();
-            const newIntervalId = setInterval(fetchData, 5000); // Fetch every 5 seconds
-            setIntervalId(newIntervalId);
+        const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
+            let message = '';
 
-            return () => clearInterval(newIntervalId); // Clear the interval when unmounting or switching users
-        }
-    }, [selectedUser]);
+            if (latestTemp > 25) {
+                message += `Warning: Temperature (${latestTemp}°C) is higher than 25°C. `;
+            }
 
-    const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
-        let message = '';
+            if (latestDsTemp > 25) {
+                message += `Warning: DS18B20 Temperature (${latestDsTemp}°C) is higher than 25°C. `;
+            }
 
-        if (latestTemp > 25) {
-            message += `Warning: Temperature (${latestTemp}°C) is higher than 25°C. `;
-        }
+            if (latestHum > 90) {
+                message += `Warning: Humidity (${latestHum}%) is higher than 90%. `;
+            }
 
-        if (latestDsTemp > 25) {
-            message += `Warning: DS18B20 Temperature (${latestDsTemp}°C) is higher than 25°C. `;
-        }
+            setWarningMessage(message);
+        };
 
-        if (latestHum > 90) {
-            message += `Warning: Humidity (${latestHum}%) is higher than 90%. `;
-        }
+        fetchData();
+        const interval = setInterval(fetchData, 500); // Fetch data every 0.5 seconds
 
-        setWarningMessage(message);
-    };
+        return () => clearInterval(interval); // Cleanup interval on component unmount
+    }, [selectedUsername]);
 
     const temperatureChartData = {
         labels: labels,
@@ -121,17 +128,38 @@ export default function Home() {
         ],
     };
 
+    const chartOptions = {
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: (tooltipItem) => {
+                        const label = tooltipItem.dataset.label || '';
+                        const value = tooltipItem.parsed.y;
+                        const index = tooltipItem.dataIndex; // Get the index of the data point
+                        const datetime = datetimeLabels[index]; // Get the corresponding datetime
+                        return `${label}: ${value} at ${datetime}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    maxRotation: 90,
+                    minRotation: 45,
+                },
+            },
+        },
+    };
+
     const deleteAllData = async () => {
         try {
-            const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/${selectedUser}`, {
-                method: 'DELETE',
+            const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas', {
+                method: 'DELETE'
             });
             const result = await response.json();
             alert(result.message); // Alert the user with the response message
-            setTemperatureData([]); // Clear charts after deletion
-            setHumidityData([]);
-            setDsTemperatureData([]);
-            setLabels([]);
         } catch (error) {
             console.error('Failed to delete data:', error);
             alert('Failed to delete data');
@@ -139,8 +167,25 @@ export default function Home() {
     };
 
     return (
-        <div className="flex flex-col items-center h-screen">
+        <div className="flex flex-col items-center min-h-screen">
             <h1 className="text-2xl font-bold my-4">Real-Time Sensor Data</h1>
+
+            <div className="mb-4">
+                <label htmlFor="username" className="mr-2 font-semibold">Select Username:</label>
+                <select
+                    id="username"
+                    value={selectedUsername}
+                    onChange={(e) => setSelectedUsername(e.target.value)}
+                    className="border rounded p-2"
+                >
+                    <option value="">-- Select Username --</option>
+                    {usernames && usernames.map((username, index) => (
+                        <option key={index} value={username}>
+                            {username}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
             {warningMessage && (
                 <div className="bg-yellow-300 text-yellow-800 p-4 mb-4 rounded">
@@ -148,136 +193,25 @@ export default function Home() {
                 </div>
             )}
 
-            {/* User Selection */}
-            {!selectedUser && (
-                <div className="mb-4">
-                    <h2 className="text-xl font-bold mb-2">Select a User</h2>
-                    <ul>
-                        {users.map((username) => (
-                            <li key={username} className="flex justify-between mb-2">
-                                <span>{username}</span>
-                                <button
-                                    onClick={() => setSelectedUser(username)}
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded"
-                                >
-                                    View
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+            <button onClick={deleteAllData}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4">
+                Delete All Data
+            </button>
 
-            {/* Charts */}
-            {selectedUser && (
-                <div className="w-full">
-                    <div className="flex justify-center mb-4">
-                        <button
-                            onClick={() => setSelectedUser(null)}
-                            className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-1 px-2 rounded mx-2"
-                        >
-                            Back to User Selection
-                        </button>
-
-                        <button onClick={deleteAllData}
-                                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mx-2">
-                            Delete All Data
-                        </button>
+            {selectedUsername ? (
+                <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
+                    <div className="row-span-1 h-64">
+                        <Line data={temperatureChartData} options={chartOptions} />
                     </div>
-
-                    <div className="grid grid-rows-3 gap-4 h-full w-full max-w-full px-4">
-                        <div className="row-span-1 h-[400px] w-full">
-                            <Line
-                                data={temperatureChartData}
-                                options={{
-                                    maintainAspectRatio: false,
-                                    responsive: true,
-                                    scales: {
-                                        x: {
-                                            type: 'time',
-                                            time: {
-                                                unit: 'minute',
-                                                tooltipFormat: 'dd/MM/yyyy HH:mm:ss', // Tooltip format
-                                                displayFormats: {
-                                                    minute: 'dd/MM/yyyy HH:mm:ss', // X-axis label format
-                                                },
-                                            },
-                                            adapters: {
-                                                date: {
-                                                    locale: es, // Set to Spanish locale
-                                                    timeZone: 'America/Lima', // Peruvian timezone
-                                                },
-                                            },
-                                            ticks: {
-                                                maxRotation: 0,
-                                            },
-                                        },
-                                    },
-                                }}
-                            />
-                        </div>
-                        <div className="row-span-1 h-[400px] w-full">
-                            <Line
-                                data={humidityChartData}
-                                options={{
-                                    maintainAspectRatio: false,
-                                    responsive: true,
-                                    scales: {
-                                        x: {
-                                            type: 'time',
-                                            time: {
-                                                unit: 'minute',
-                                                tooltipFormat: 'dd/MM/yyyy HH:mm:ss',
-                                                displayFormats: {
-                                                    minute: 'dd/MM/yyyy HH:mm:ss',
-                                                },
-                                            },
-                                            adapters: {
-                                                date: {
-                                                    locale: es,
-                                                    timeZone: 'America/Lima',
-                                                },
-                                            },
-                                            ticks: {
-                                                maxRotation: 0,
-                                            },
-                                        },
-                                    },
-                                }}
-                            />
-                        </div>
-                        <div className="row-span-1 h-[400px] w-full">
-                            <Line
-                                data={dsTemperatureChartData}
-                                options={{
-                                    maintainAspectRatio: false,
-                                    responsive: true,
-                                    scales: {
-                                        x: {
-                                            type: 'time',
-                                            time: {
-                                                unit: 'minute',
-                                                tooltipFormat: 'dd/MM/yyyy HH:mm:ss',
-                                                displayFormats: {
-                                                    minute: 'dd/MM/yyyy HH:mm:ss',
-                                                },
-                                            },
-                                            adapters: {
-                                                date: {
-                                                    locale: es,
-                                                    timeZone: 'America/Lima',
-                                                },
-                                            },
-                                            ticks: {
-                                                maxRotation: 0,
-                                            },
-                                        },
-                                    },
-                                }}
-                            />
-                        </div>
+                    <div className="row-span-1 h-64">
+                        <Line data={humidityChartData} options={chartOptions} />
+                    </div>
+                    <div className="row-span-1 h-64">
+                        <Line data={dsTemperatureChartData} options={chartOptions} />
                     </div>
                 </div>
+            ) : (
+                <p className="text-gray-500">Please select a username to view the charts.</p>
             )}
         </div>
     );
