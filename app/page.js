@@ -153,9 +153,9 @@ export default function Home() {
         },
     };
 
-    const deleteAllData = async () => {
+    const deleteAllData = async (user) => {
         try {
-            const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas', {
+            const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/${user}`, {
                 method: 'DELETE'
             });
             const result = await response.json();
@@ -193,15 +193,17 @@ export default function Home() {
                 </div>
             )}
 
-            <button onClick={deleteAllData}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4">
-                Delete All Data
-            </button>
+            {selectedUsername && (
+                <button onClick={() => deleteAllData(selectedUsername)}
+                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4">
+                    Delete All Data
+                </button>
+            )}
 
             {selectedUsername ? (
                 <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
                     <div className="row-span-1 h-64">
-                        <Line data={temperatureChartData} options={chartOptions} />
+                    <Line data={temperatureChartData} options={chartOptions} />
                     </div>
                     <div className="row-span-1 h-64">
                         <Line data={humidityChartData} options={chartOptions} />
