@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
+import WebSocket from 'isomorphic-ws';
 
 export default function Home() {
     const [temperatureData, setTemperatureData] = useState([]);
@@ -10,14 +11,16 @@ export default function Home() {
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [usernames, setUsernames] = useState([]); // Initialize as an empty array
+    const [usernames, setUsernames] = useState([]);
     const [selectedUsername, setSelectedUsername] = useState('');
-    const [datetimeLabels, setDatetimeLabels] = useState([]); // Separate datetime for tooltips
+    const [datetimeLabels, setDatetimeLabels] = useState([]);
+
+    const ws = useRef(null);
 
     // Function to fetch usernames
     const fetchUsernames = async () => {
         try {
-            const response = await fetch('https://bio-data-peach-kappa.vercel.app/api/v1/datas/usernames');
+            const response = await fetch('https://temphu.lonkansoft.pro:3002/api/v1/datas/usernames');
             const data = await response.json();
             setUsernames(data);
         } catch (error) {
@@ -29,64 +32,78 @@ export default function Home() {
         fetchUsernames();
     }, []);
 
+    const checkForWarnings = useCallback((latestTemp, latestHum, latestDsTemp) => {
+        let message = '';
+
+        if (latestTemp > 25) {
+            message += `Warning: Temperature (${latestTemp}°C) is higher than 25°C. `;
+        }
+
+        if (latestDsTemp > 25) {
+            message += `Warning: DS18B20 Temperature (${latestDsTemp}°C) is higher than 25°C. `;
+        }
+
+        if (latestHum > 90) {
+            message += `Warning: Humidity (${latestHum}%) is higher than 90%. `;
+        }
+
+        setWarningMessage(message);
+    }, []);
+
+    const updateChartData = useCallback((data) => {
+        const temp = data.map(entry => entry.temperature);
+        const hum = data.map(entry => entry.humidity);
+        const dsTemp = data.map(entry => entry.dsTemperature);
+
+        const timeLabels = data.map((_, index) => `T-${index + 1}`);
+        const datetimeLabels = data.map(entry => new Date(entry.datetime).toLocaleString('en-GB', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit'
+        }));
+
+        setTemperatureData(temp);
+        setHumidityData(hum);
+        setDsTemperatureData(dsTemp);
+        setLabels(timeLabels);
+        setDatetimeLabels(datetimeLabels);
+
+        checkForWarnings(
+            temp[temp.length - 1],
+            hum[hum.length - 1],
+            dsTemp[dsTemp.length - 1]
+        );
+    }, [checkForWarnings]);
+
     useEffect(() => {
         if (!selectedUsername) return;
 
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/username/${selectedUsername}`);
-                const data = await response.json();
+        const socket = new WebSocket('wss://temphu.lonkansoft.pro:3002');
+        ws.current = socket;
 
-                const temp = data.map(entry => entry.temperature);
-                const hum = data.map(entry => entry.humidity);
-                const dsTemp = data.map(entry => entry.dsTemperature);
-
-                // Generate "T-1", "T-2", ... labels based on the number of data points
-                const timeLabels = data.map((_, index) => `T-${index + 1}`);
-                // Store the datetime for use in the tooltips
-                const datetimeLabels = data.map(entry => new Date(entry.datetime).toLocaleString('en-GB', {
-                    day: '2-digit', month: '2-digit', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit', second: '2-digit'
-                }));
-
-                setTemperatureData(temp);
-                setHumidityData(hum);
-                setDsTemperatureData(dsTemp);
-                setLabels(timeLabels);
-                setDatetimeLabels(datetimeLabels); // Set datetime for tooltips
-
-                // Check for warnings
-                if (temp.length > 0 && hum.length > 0 && dsTemp.length > 0) {
-                    checkForWarnings(temp[temp.length - 1], hum[hum.length - 1], dsTemp[dsTemp.length - 1]);
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
+        socket.onopen = () => {
+            console.log('WebSocket connection established');
+            socket.send(JSON.stringify({ action: 'subscribe', username: selectedUsername }));
         };
 
-        const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
-            let message = '';
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log('Real-time data received:', data);
 
-            if (latestTemp > 25) {
-                message += `Warning: Temperature (${latestTemp}°C) is higher than 25°C. `;
-            }
-
-            if (latestDsTemp > 25) {
-                message += `Warning: DS18B20 Temperature (${latestDsTemp}°C) is higher than 25°C. `;
-            }
-
-            if (latestHum > 90) {
-                message += `Warning: Humidity (${latestHum}%) is higher than 90%. `;
-            }
-
-            setWarningMessage(message);
+            updateChartData(data);
         };
 
-        fetchData();
-        const interval = setInterval(fetchData, 500); // Fetch data every 0.5 seconds
+        socket.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
 
-        return () => clearInterval(interval); // Cleanup interval on component unmount
-    }, [selectedUsername]);
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        return () => {
+            if (ws.current) ws.current.close();
+        };
+    }, [selectedUsername, updateChartData]);
 
     const temperatureChartData = {
         labels: labels,
@@ -135,8 +152,8 @@ export default function Home() {
                     label: (tooltipItem) => {
                         const label = tooltipItem.dataset.label || '';
                         const value = tooltipItem.parsed.y;
-                        const index = tooltipItem.dataIndex; // Get the index of the data point
-                        const datetime = datetimeLabels[index]; // Get the corresponding datetime
+                        const index = tooltipItem.dataIndex;
+                        const datetime = datetimeLabels[index];
                         return `${label}: ${value} at ${datetime}`;
                     }
                 }
@@ -150,24 +167,6 @@ export default function Home() {
                 },
             },
         },
-    };
-
-    // Delete all data for a specific user
-    const deleteAllData = async (user) => {
-        try {
-            const response = await fetch(`https://bio-data-peach-kappa.vercel.app/api/v1/datas/${user}`, {
-                method: 'DELETE'
-            });
-            const result = await response.json();
-            alert(result.message); // Alert the user with the response message
-
-            // Reset selected username and refetch the list of usernames
-            setSelectedUsername(''); // Reset selected username to the default value
-            await fetchUsernames();  // Refetch usernames to update the list
-        } catch (error) {
-            console.error('Failed to delete data:', error);
-            alert('Failed to delete data');
-        }
     };
 
     return (
@@ -195,13 +194,6 @@ export default function Home() {
                 <div className="bg-yellow-300 text-yellow-800 p-4 mb-4 rounded">
                     {warningMessage}
                 </div>
-            )}
-
-            {selectedUsername && (
-                <button onClick={() => deleteAllData(selectedUsername)}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mb-4">
-                    Delete All Data
-                </button>
             )}
 
             {selectedUsername ? (
