@@ -11,7 +11,7 @@ export default function Home() {
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [connectedUsers, setConnectedUsers] = useState([]); // Store connected users
+    const [connectedUsers, setConnectedUsers] = useState([]); // Store connected users dynamically
     const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]);
 
@@ -67,15 +67,14 @@ export default function Home() {
             const data = JSON.parse(event.data);
             console.log('Real-time data received:', data);
 
-            // Handle connected users update
-            if (data.action === 'connectedUsers') {
-                console.log('Connected users:', data.users);
-                setConnectedUsers(data.users); // Update the list of connected users
+            // Dynamically update the list of connected users based on username in the data
+            if (!connectedUsers.includes(data.username)) {
+                setConnectedUsers(prevUsers => [...prevUsers, data.username]);
             }
 
-            // Handle incoming sensor data and update charts for the selected user
+            // Update charts only if the data is for the selected user
             if (data.username === selectedUsername) {
-                updateChartData(data); // Update charts if the selected user's data is received
+                updateChartData(data);
             }
         };
 
@@ -90,15 +89,10 @@ export default function Home() {
         return () => {
             if (ws.current) ws.current.close();
         };
-    }, [selectedUsername, updateChartData]);
+    }, [selectedUsername, updateChartData, connectedUsers]);
 
     const handleUserSelection = (username) => {
         setSelectedUsername(username);
-
-        // Notify the server that the frontend has subscribed to this user
-        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({ action: 'subscribe', username }));
-        }
     };
 
     const temperatureChartData = {
