@@ -11,27 +11,11 @@ export default function Home() {
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [usernames, setUsernames] = useState([]);
-    const [connectedUsers, setConnectedUsers] = useState([]); // Stores connected users for WebSocket
+    const [connectedUsers, setConnectedUsers] = useState([]); // Store connected users
     const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]);
 
     const ws = useRef(null);
-
-    // Function to fetch usernames
-    const fetchUsernames = async () => {
-        try {
-            const response = await fetch('https://temphu.lonkansoft.pro:3002/api/v1/datas/usernames');
-            const data = await response.json();
-            setUsernames(data);
-        } catch (error) {
-            console.error('Error fetching usernames:', error);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsernames();
-    }, []);
 
     const checkForWarnings = useCallback((latestTemp, latestHum, latestDsTemp) => {
         let message = '';
@@ -85,10 +69,11 @@ export default function Home() {
 
             // Handle connected users update
             if (data.action === 'connectedUsers') {
+                console.log('Connected users:', data.users);
                 setConnectedUsers(data.users); // Update the list of connected users
             }
 
-            // Update charts for selected user
+            // Handle incoming sensor data and update charts for the selected user
             if (data.username === selectedUsername) {
                 updateChartData(data); // Update charts if the selected user's data is received
             }
@@ -186,15 +171,19 @@ export default function Home() {
             <div className="w-1/4 p-4 border-r border-gray-300">
                 <h2 className="text-xl font-semibold mb-4">Connected Users</h2>
                 <ul>
-                    {connectedUsers.map((user, index) => (
-                        <li
-                            key={index}
-                            className={`p-2 cursor-pointer ${selectedUsername === user ? 'bg-blue-500 text-white' : 'hover:bg-gray-200'}`}
-                            onClick={() => handleUserSelection(user)}
-                        >
-                            {user}
-                        </li>
-                    ))}
+                    {connectedUsers.length > 0 ? (
+                        connectedUsers.map((user, index) => (
+                            <li
+                                key={index}
+                                className={`p-2 cursor-pointer ${selectedUsername === user ? 'bg-blue-500 text-white' : 'hover:bg-gray-200'}`}
+                                onClick={() => handleUserSelection(user)}
+                            >
+                                {user}
+                            </li>
+                        ))
+                    ) : (
+                        <li className="text-gray-500">No users connected</li>
+                    )}
                 </ul>
             </div>
 
