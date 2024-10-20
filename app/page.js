@@ -12,6 +12,7 @@ export default function Home() {
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
     const [usernames, setUsernames] = useState([]);
+    const [connectedUsers, setConnectedUsers] = useState([]); // Stores connected users for WebSocket
     const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]);
 
@@ -51,45 +52,46 @@ export default function Home() {
     }, []);
 
     const updateChartData = useCallback((data) => {
-        const temp = data.map(entry => entry.temperature);
-        const hum = data.map(entry => entry.humidity);
-        const dsTemp = data.map(entry => entry.dsTemperature);
+        const temp = data.temperature;
+        const hum = data.humidity;
+        const dsTemp = data.dsTemperature;
 
-        const timeLabels = data.map((_, index) => `T-${index + 1}`);
-        const datetimeLabels = data.map(entry => new Date(entry.datetime).toLocaleString('en-GB', {
+        const datetime = new Date(data.datetime).toLocaleString('en-GB', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit'
-        }));
+        });
 
-        setTemperatureData(temp);
-        setHumidityData(hum);
-        setDsTemperatureData(dsTemp);
-        setLabels(timeLabels);
-        setDatetimeLabels(datetimeLabels);
+        setTemperatureData(prevData => [...prevData.slice(-99), temp]);
+        setHumidityData(prevData => [...prevData.slice(-99), hum]);
+        setDsTemperatureData(prevData => [...prevData.slice(-99), dsTemp]);
+        setLabels(prevLabels => [...prevLabels.slice(-99), `T-${prevLabels.length + 1}`]);
+        setDatetimeLabels(prevLabels => [...prevLabels.slice(-99), datetime]);
 
-        checkForWarnings(
-            temp[temp.length - 1],
-            hum[hum.length - 1],
-            dsTemp[dsTemp.length - 1]
-        );
+        checkForWarnings(temp, hum, dsTemp);
     }, [checkForWarnings]);
 
     useEffect(() => {
-        if (!selectedUsername) return;
-
+        // Initialize WebSocket connection
         const socket = new WebSocket('wss://temphu.lonkansoft.pro:3002');
         ws.current = socket;
 
         socket.onopen = () => {
             console.log('WebSocket connection established');
-            socket.send(JSON.stringify({ action: 'subscribe', username: selectedUsername }));
         };
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             console.log('Real-time data received:', data);
 
-            updateChartData(data);
+            // Handle connected users update
+            if (data.action === 'connectedUsers') {
+                setConnectedUsers(data.users); // Update the list of connected users
+            }
+
+            // Update charts for selected user
+            if (data.username === selectedUsername) {
+                updateChartData(data); // Update charts if the selected user's data is received
+            }
         };
 
         socket.onclose = () => {
@@ -104,6 +106,15 @@ export default function Home() {
             if (ws.current) ws.current.close();
         };
     }, [selectedUsername, updateChartData]);
+
+    const handleUserSelection = (username) => {
+        setSelectedUsername(username);
+
+        // Notify the server that the frontend has subscribed to this user
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+            ws.current.send(JSON.stringify({ action: 'subscribe', username }));
+        }
+    };
 
     const temperatureChartData = {
         labels: labels,
@@ -170,47 +181,61 @@ export default function Home() {
     };
 
     return (
-        <div className="flex flex-col items-center min-h-screen">
-            <h1 className="text-2xl font-bold my-4">Real-Time Sensor Data</h1>
-
-            <div className="mb-4">
-                <label htmlFor="username" className="mr-2 font-semibold">Select Username:</label>
-                <select
-                    id="username"
-                    value={selectedUsername}
-                    onChange={(e) => setSelectedUsername(e.target.value)}
-                    className="border rounded p-2"
-                >
-                    <option value="">-- Select Username --</option>
-                    {usernames && usernames.map((username, index) => (
-                        <option key={index} value={username}>
-                            {username}
-                        </option>
+        <div className="flex min-h-screen">
+            {/* Left Column for Connected Users */}
+            <div className="w-1/4 p-4 border-r border-gray-300">
+                <h2 className="text-xl font-semibold mb-4">Connected Users</h2>
+                <ul>
+                    {connectedUsers.map((user, index) => (
+                        <li
+                            key={index}
+                            className={`p-2 cursor-pointer ${selectedUsername === user ? 'bg-blue-500 text-white' : 'hover:bg-gray-200'}`}
+                            onClick={() => handleUserSelection(user)}
+                        >
+                            {user}
+                        </li>
                     ))}
-                </select>
+                </ul>
             </div>
 
-            {warningMessage && (
-                <div className="bg-yellow-300 text-yellow-800 p-4 mb-4 rounded">
-                    {warningMessage}
-                </div>
-            )}
+            {/* Main Content for Real-Time Data */}
+            <div className="w-3/4 p-4">
+                <h1 className="text-2xl font-bold mb-4">Real-Time Sensor Data</h1>
 
-            {selectedUsername ? (
-                <div className="grid grid-rows-3 gap-4 h-full w-full max-w-4xl px-4">
-                    <div className="row-span-1 h-64">
-                        <Line data={temperatureChartData} options={chartOptions} />
+                {warningMessage && (
+                    <div className="bg-yellow-300 text-yellow-800 p-4 mb-4 rounded">
+                        {warningMessage}
                     </div>
-                    <div className="row-span-1 h-64">
-                        <Line data={humidityChartData} options={chartOptions} />
-                    </div>
-                    <div className="row-span-1 h-64">
-                        <Line data={dsTemperatureChartData} options={chartOptions} />
-                    </div>
-                </div>
-            ) : (
-                <p className="text-gray-500">Please select a username to view the charts.</p>
-            )}
+                )}
+
+                {selectedUsername ? (
+                    <>
+                        {/* Card with latest data */}
+                        <div className="bg-white p-4 rounded shadow mb-4">
+                            <h2 className="text-xl font-semibold mb-2">Latest Data for {selectedUsername}</h2>
+                            <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
+                            <p><strong>Humidity:</strong> {humidityData[humidityData.length - 1]} %</p>
+                            <p><strong>DS18B20 Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
+                            <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
+                        </div>
+
+                        {/* Charts */}
+                        <div className="grid grid-rows-3 gap-4 h-full w-full">
+                            <div className="row-span-1 h-64">
+                                <Line data={temperatureChartData} options={chartOptions} />
+                            </div>
+                            <div className="row-span-1 h-64">
+                                <Line data={humidityChartData} options={chartOptions} />
+                            </div>
+                            <div className="row-span-1 h-64">
+                                <Line data={dsTemperatureChartData} options={chartOptions} />
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <p className="text-gray-500">Please select a username to view the charts.</p>
+                )}
+            </div>
         </div>
     );
 }
