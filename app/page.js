@@ -1,5 +1,5 @@
 'use client'
-// init
+
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
@@ -11,13 +11,12 @@ export default function Home() {
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [connectedUsers, setConnectedUsers] = useState([]); // List of connected users
-    const [selectedUsername, setSelectedUsername] = useState(''); // Selected user to view data
+    const [connectedUsers, setConnectedUsers] = useState([]); // Store connected users dynamically
+    const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]);
 
     const ws = useRef(null);
 
-    // Function to check warnings based on data
     const checkForWarnings = useCallback((latestTemp, latestHum, latestDsTemp) => {
         let message = '';
 
@@ -36,50 +35,27 @@ export default function Home() {
         setWarningMessage(message);
     }, []);
 
-    // Update chart data with new values
     const updateChartData = useCallback((data) => {
         const temp = data.temperature;
         const hum = data.humidity;
         const dsTemp = data.dsTemperature;
 
-        // Format the datetime for display
         const datetime = new Date(data.datetime).toLocaleString('en-GB', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
 
-        // Update the state arrays to include the new data, keeping only the last 100 points
         setTemperatureData(prevData => [...prevData.slice(-99), temp]);
         setHumidityData(prevData => [...prevData.slice(-99), hum]);
         setDsTemperatureData(prevData => [...prevData.slice(-99), dsTemp]);
         setLabels(prevLabels => [...prevLabels.slice(-99), `T-${prevLabels.length + 1}`]);
         setDatetimeLabels(prevLabels => [...prevLabels.slice(-99), datetime]);
 
-        // Check for warnings based on the latest data values
         checkForWarnings(temp, hum, dsTemp);
     }, [checkForWarnings]);
 
-    // Fetch historical data for the selected user from the backend
-    const fetchUserData = async (username) => {
-        const response = await fetch(`/api/v1/datas/${username}`);
-        if (response.ok) {
-            const data = await response.json();
-            data.forEach(entry => updateChartData(entry)); // Populate chart data with historical data
-        }
-    };
-
-    // Clear data for the selected user on the backend and reset the client-side state
-    const handleClearData = async () => {
-        await fetch(`/api/v1/datas/clear/${selectedUsername}`, { method: 'DELETE' });
-        setTemperatureData([]);
-        setHumidityData([]);
-        setDsTemperatureData([]);
-        setLabels([]);
-        setDatetimeLabels([]);
-    };
-
-    // Initialize WebSocket and handle real-time data updates
     useEffect(() => {
+        // Initialize WebSocket connection
         const socket = new WebSocket('wss://temphu.website101.xyz:3002');
         ws.current = socket;
 
@@ -87,18 +63,17 @@ export default function Home() {
             console.log('WebSocket connection established');
         };
 
-        // Handle incoming WebSocket messages
         socket.onmessage = (event) => {
-            const { username, data } = JSON.parse(event.data);
+            const data = JSON.parse(event.data);
             console.log('Real-time data received:', data);
 
-            // Add the user to the connected users list if not already present
-            if (!connectedUsers.includes(username)) {
-                setConnectedUsers(prev => [...prev, username]);
+            // Dynamically update the list of connected users based on username in the data
+            if (!connectedUsers.includes(data.username)) {
+                setConnectedUsers(prevUsers => [...prevUsers, data.username]);
             }
 
             // Update charts only if the data is for the selected user
-            if (username === selectedUsername) {
+            if (data.username === selectedUsername) {
                 updateChartData(data);
             }
         };
@@ -114,15 +89,12 @@ export default function Home() {
         return () => {
             if (ws.current) ws.current.close();
         };
-    }, [selectedUsername, connectedUsers, updateChartData]);
+    }, [selectedUsername, updateChartData, connectedUsers]);
 
-    // Handle user selection from the connected users list
     const handleUserSelection = (username) => {
         setSelectedUsername(username);
-        fetchUserData(username); // Fetch historical data for the selected user
     };
 
-    // Chart data and options
     const temperatureChartData = {
         labels: labels,
         datasets: [
@@ -189,7 +161,7 @@ export default function Home() {
 
     return (
         <div className="flex min-h-screen">
-            {/* Sidebar for Connected Users */}
+            {/* Left Column for Connected Users */}
             <div className="w-1/4 p-4 border-r border-gray-300">
                 <h2 className="text-xl font-semibold mb-4">Connected Users</h2>
                 <ul>
@@ -207,11 +179,6 @@ export default function Home() {
                         <li className="text-gray-500">No users connected</li>
                     )}
                 </ul>
-                {selectedUsername && (
-                    <button onClick={handleClearData} className="bg-red-500 text-white p-2 rounded mt-4">
-                        Clear Data for {selectedUsername}
-                    </button>
-                )}
             </div>
 
             {/* Main Content for Real-Time Data */}
@@ -226,7 +193,7 @@ export default function Home() {
 
                 {selectedUsername ? (
                     <>
-                        {/* Card with Latest Data */}
+                        {/* Card with latest data */}
                         <div className="bg-white p-4 rounded shadow mb-4">
                             <h2 className="text-xl font-semibold mb-2">Latest Data for {selectedUsername}</h2>
                             <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
