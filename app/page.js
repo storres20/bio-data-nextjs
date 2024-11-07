@@ -1,5 +1,5 @@
 'use client'
-
+// init
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
