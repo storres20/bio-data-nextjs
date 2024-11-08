@@ -196,22 +196,29 @@ export default function Home() {
                         {/* Card with latest data */}
                         <div className="bg-white p-4 rounded shadow mb-4">
                             <h2 className="text-xl font-semibold mb-2">Latest Data for {selectedUsername}</h2>
+                            <p><strong>DS18B20 Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
                             <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
                             <p><strong>Humidity:</strong> {humidityData[humidityData.length - 1]} %</p>
-                            <p><strong>DS18B20 Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
                             <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                         </div>
 
                         {/* Charts */}
                         <div className="grid grid-rows-3 gap-4 h-full w-full">
                             <div className="row-span-1 h-64">
-                                <Line data={temperatureChartData} options={chartOptions} />
+                                <p><strong>DS18B20
+                                    Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
+                                <Line data={dsTemperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
-                                <Line data={humidityChartData} options={chartOptions} />
+                                <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
+                                <Line data={temperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
-                                <Line data={dsTemperatureChartData} options={chartOptions} />
+                                <p><strong>Humidity:</strong> {humidityData[humidityData.length - 1]} %</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
+                                <Line data={humidityChartData} options={chartOptions}/>
                             </div>
                         </div>
                     </>
