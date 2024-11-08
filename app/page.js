@@ -11,11 +11,14 @@ export default function Home() {
     const [dsTemperatureData, setDsTemperatureData] = useState([]);
     const [labels, setLabels] = useState([]);
     const [warningMessage, setWarningMessage] = useState('');
-    const [connectedUsers, setConnectedUsers] = useState([]); // Store connected users dynamically
+    const [connectedUsers, setConnectedUsers] = useState([]);
     const [selectedUsername, setSelectedUsername] = useState('');
     const [datetimeLabels, setDatetimeLabels] = useState([]);
 
     const ws = useRef(null);
+
+    // Data storage for each user
+    const userDataStore = useRef({});
 
     const checkForWarnings = useCallback((latestTemp, latestHum, latestDsTemp) => {
         let message = '';
@@ -45,14 +48,28 @@ export default function Home() {
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
 
-        setTemperatureData(prevData => [...prevData.slice(-99), temp]);
-        setHumidityData(prevData => [...prevData.slice(-99), hum]);
-        setDsTemperatureData(prevData => [...prevData.slice(-99), dsTemp]);
-        setLabels(prevLabels => [...prevLabels.slice(-99), `T-${prevLabels.length + 1}`]);
-        setDatetimeLabels(prevLabels => [...prevLabels.slice(-99), datetime]);
+        // Update the current user's data in the userDataStore
+        if (selectedUsername) {
+            const userData = userDataStore.current[selectedUsername] || { temperatureData: [], humidityData: [], dsTemperatureData: [], labels: [], datetimeLabels: [] };
+
+            userData.temperatureData = [...userData.temperatureData.slice(-99), temp];
+            userData.humidityData = [...userData.humidityData.slice(-99), hum];
+            userData.dsTemperatureData = [...userData.dsTemperatureData.slice(-99), dsTemp];
+            userData.labels = [...userData.labels.slice(-99), `T-${userData.labels.length + 1}`];
+            userData.datetimeLabels = [...userData.datetimeLabels.slice(-99), datetime];
+
+            userDataStore.current[selectedUsername] = userData;
+
+            // Update the state to re-render the charts
+            setTemperatureData(userData.temperatureData);
+            setHumidityData(userData.humidityData);
+            setDsTemperatureData(userData.dsTemperatureData);
+            setLabels(userData.labels);
+            setDatetimeLabels(userData.datetimeLabels);
+        }
 
         checkForWarnings(temp, hum, dsTemp);
-    }, [checkForWarnings]);
+    }, [checkForWarnings, selectedUsername]);
 
     useEffect(() => {
         // Initialize WebSocket connection
@@ -92,7 +109,18 @@ export default function Home() {
     }, [selectedUsername, updateChartData, connectedUsers]);
 
     const handleUserSelection = (username) => {
+        // Save the selected user and load their saved data
         setSelectedUsername(username);
+
+        // Load data for the selected user from userDataStore or initialize empty arrays
+        const userData = userDataStore.current[username] || { temperatureData: [], humidityData: [], dsTemperatureData: [], labels: [], datetimeLabels: [] };
+
+        setTemperatureData(userData.temperatureData);
+        setHumidityData(userData.humidityData);
+        setDsTemperatureData(userData.dsTemperatureData);
+        setLabels(userData.labels);
+        setDatetimeLabels(userData.datetimeLabels);
+        setWarningMessage('');
     };
 
     const temperatureChartData = {
@@ -205,19 +233,12 @@ export default function Home() {
                         {/* Charts */}
                         <div className="grid grid-rows-3 gap-4 h-full w-full">
                             <div className="row-span-1 h-64">
-                                <p><strong>DS18B20
-                                    Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
-                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={dsTemperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
-                                <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
-                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={temperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
-                                <p><strong>Humidity:</strong> {humidityData[humidityData.length - 1]} %</p>
-                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={humidityChartData} options={chartOptions}/>
                             </div>
                         </div>
