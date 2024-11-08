@@ -233,12 +233,19 @@ export default function Home() {
                         {/* Charts */}
                         <div className="grid grid-rows-3 gap-4 h-full w-full">
                             <div className="row-span-1 h-64">
+                                <p><strong>DS18B20
+                                    Temperature:</strong> {dsTemperatureData[dsTemperatureData.length - 1]} °C</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={dsTemperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
+                                <p><strong>Temperature:</strong> {temperatureData[temperatureData.length - 1]} °C</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={temperatureChartData} options={chartOptions}/>
                             </div>
                             <div className="row-span-1 h-64">
+                                <p><strong>Humidity:</strong> {humidityData[humidityData.length - 1]} %</p>
+                                <p><strong>Datetime:</strong> {datetimeLabels[datetimeLabels.length - 1]}</p>
                                 <Line data={humidityChartData} options={chartOptions}/>
                             </div>
                         </div>
