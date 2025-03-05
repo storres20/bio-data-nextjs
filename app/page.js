@@ -73,7 +73,7 @@ export default function Home() {
 
     useEffect(() => {
         // Initialize WebSocket connection
-        const socket = new WebSocket('wss://temphu.website101.xyz:3002');
+        const socket = new WebSocket('wss://bio-data-production.up.railway.app');
         ws.current = socket;
 
         socket.onopen = () => {
