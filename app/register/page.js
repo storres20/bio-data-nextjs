@@ -10,20 +10,22 @@ export default function Register() {
     const [selectedHospital, setSelectedHospital] = useState('');
     const [selectedArea, setSelectedArea] = useState('');
     const [message, setMessage] = useState('');
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+
 
     useEffect(() => {
         // Fetch hospitals and areas from backend
-        fetch('https://bio-data-production.up.railway.app/api/auth/hospitals')
+        fetch(`${apiBase}/api/auth/hospitals`)
             .then((res) => res.json())
             .then((data) => setHospitals(data));
 
-        fetch('https://bio-data-production.up.railway.app/api/auth/areas')
+        fetch(`${apiBase}/api/auth/areas`)
             .then((res) => res.json())
             .then((data) => setAreas(data));
     }, []);
 
     const handleRegister = async () => {
-        const response = await fetch('https://bio-data-production.up.railway.app/api/auth/register', {
+        const response = await fetch(`${apiBase}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, hospital_id: selectedHospital, area_id: selectedArea }),

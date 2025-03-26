@@ -1,21 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const { login } = useAuth();
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
     const handleLogin = async () => {
-        const response = await fetch('https://bio-data-production.up.railway.app/api/auth/login', {
+        const response = await fetch(`${apiBase}/api/auth/login`, {
+
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
         });
 
         if (response.ok) {
-            window.location.href = '/dashboard';
+            const data = await response.json();
+            login(data.user, data.token);
+            window.location.href = '/data'; // Redirect to data page
         } else {
             const errorData = await response.json();
             setErrorMessage(errorData.message);
