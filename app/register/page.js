@@ -10,7 +10,8 @@ export default function Register() {
     const [selectedHospital, setSelectedHospital] = useState('');
     const [selectedArea, setSelectedArea] = useState('');
     const [message, setMessage] = useState('');
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
 
     useEffect(() => {

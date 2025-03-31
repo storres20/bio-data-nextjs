@@ -14,13 +14,15 @@ export default function DataPage() {
     const [selectedUserWarning, setSelectedUserWarning] = useState('');
     const ws = useRef(null);
 
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
+
     // 🔒 Redirect if not authenticated
     useEffect(() => {
         if (hydrated && !token) {
             window.location.href = '/login';
         }
     }, [hydrated, token]);
-
 
     const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
         let message = '';
@@ -37,8 +39,20 @@ export default function DataPage() {
 
         socket.onopen = () => console.log('WebSocket connected.');
 
-        socket.onmessage = (event) => {
+        socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
+
+            let assignedDevice = null;
+
+            try {
+                const res = await fetch(`${apiBase}/api/devices/by-sensor/${data.username}`);
+                if (res.ok) {
+                    assignedDevice = await res.json();
+                }
+            } catch (err) {
+                console.error('Error fetching assigned device:', err);
+            }
+
             setConnectedUsers((prev) => {
                 const updated = new Map(prev);
                 const existing = updated.get(data.username) || {
@@ -49,6 +63,7 @@ export default function DataPage() {
                 };
 
                 const warning = checkForWarnings(data.temperature, data.humidity, data.dsTemperature);
+
                 updated.set(data.username, {
                     ...existing,
                     dsTemperature: data.dsTemperature,
@@ -66,6 +81,7 @@ export default function DataPage() {
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
                     })],
                     warningMessage: warning,
+                    device: assignedDevice, // 👈 se incluye el dispositivo asignado
                 });
 
                 return updated;
@@ -78,7 +94,7 @@ export default function DataPage() {
         return () => {
             if (ws.current) ws.current.close();
         };
-    }, []);
+    }, [apiBase]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -97,7 +113,6 @@ export default function DataPage() {
         return () => clearInterval(interval);
     }, []);
 
-    // ✅ Wait for hydration before rendering
     if (!hydrated || !user) return null;
 
     const getChartData = (label, data, color) => ({
@@ -145,7 +160,6 @@ export default function DataPage() {
                 </p>
             </div>
 
-
             {/* Search Bar */}
             {!selectedUser && (
                 <div className="mb-4">
@@ -184,6 +198,17 @@ export default function DataPage() {
                     <p><strong>Humidity:</strong> {connectedUsers.get(selectedUser)?.humidity} %</p>
                     <p><strong>Datetime:</strong> {connectedUsers.get(selectedUser)?.datetime}</p>
 
+                    {/* Device info */}
+                    {connectedUsers.get(selectedUser)?.device && (
+                        <div className="mt-2 text-sm text-gray-700">
+                            <p><strong>Device:</strong> {connectedUsers.get(selectedUser).device.name}</p>
+                            <p><strong>Model:</strong> {connectedUsers.get(selectedUser).device.model}</p>
+                            <p><strong>Brand:</strong> {connectedUsers.get(selectedUser).device.brand}</p>
+                            <p><strong>Serie:</strong> {connectedUsers.get(selectedUser).device.serie}</p>
+                        </div>
+                    )}
+
+                    {/* Charts */}
                     <div className="grid grid-rows-3 gap-4 h-full w-full mt-4">
                         <div className="row-span-1 h-64">
                             <Line data={getChartData("DS18B20 Temperature (°C)", connectedUsers.get(selectedUser)?.dsTemperatureHistory, 'rgba(75, 192, 192, 1)')} options={chartOptions} />
@@ -214,6 +239,15 @@ export default function DataPage() {
                                     <p><strong>Temperature:</strong> {data.temperature} °C</p>
                                     <p><strong>Humidity:</strong> {data.humidity} %</p>
                                     <p><strong>Datetime:</strong> {data.datetime}</p>
+
+                                    {data.device && (
+                                        <div className="mt-2 text-sm text-gray-700">
+                                            <p><strong>Device:</strong> {data.device.name}</p>
+                                            <p><strong>Model:</strong> {data.device.model}</p>
+                                            <p><strong>Brand:</strong> {data.device.brand}</p>
+                                            <p><strong>Serie:</strong> {data.device.serie}</p>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

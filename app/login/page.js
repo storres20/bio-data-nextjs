@@ -8,8 +8,8 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const { login } = useAuth();
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
-    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
     const handleLogin = async () => {
         const response = await fetch(`${apiBase}/api/auth/login`, {
