@@ -14,7 +14,8 @@ export default function HistoryPage() {
     const [to, setTo] = useState('');
     const chartRefs = useRef({});
 
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
     useEffect(() => {
         if (hydrated && user) {

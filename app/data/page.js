@@ -14,8 +14,8 @@ export default function DataPage() {
     const [selectedUserWarning, setSelectedUserWarning] = useState('');
     const ws = useRef(null);
 
-    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
     // 🔒 Redirect if not authenticated
     useEffect(() => {

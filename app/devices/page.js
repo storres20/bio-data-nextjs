@@ -10,8 +10,9 @@ export default function DevicesPage() {
     const { user, token, hydrated } = useAuth();
     const [devices, setDevices] = useState([]);
     const [connectedSensors, setConnectedSensors] = useState([]);
-    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL; // ✅ LOCAL para desarrollo
+
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
+    //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL; // ✅ LOCAL para desarrollo
 
     // 🔒 Redirigir si no está autenticado
     useEffect(() => {
