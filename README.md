@@ -1,31 +1,52 @@
-![image](https://github.com/user-attachments/assets/0f3cbb55-82b9-4c1e-896e-c806765127a9)
+# TEMPHU Frontend Application
 
-# Real-Time Temperature Monitoring System
+This is the frontend application of the **TEMPHU** project, providing a real-time dashboard and historical data view for temperature and humidity monitoring.
 
-## Overview
+## 🚀 Features
 
-This project is a real-time temperature monitoring system built with a Node.js backend and a Next.js frontend. Data is collected from a DS18B20 sensor connected to an ESP8266 NodeMCU and is sent to the backend server, which stores the data in a MongoDB database. The frontend retrieves and displays this data using dynamic, auto-updating graphs.
+- Real-time data updates every 2 seconds using WebSocket.
+- Historical data view with date-based filtering.
+- Responsive web dashboard design.
+- Visualisation of temperature and humidity charts.
 
-## Features
+## 🔧 Technologies Used
 
-- **Real-Time Monitoring:** Temperature data are updated on the frontend every 0.5 seconds.
-- **Responsive Design:** The frontend is responsive, with charts displayed side-by-side on larger screens and stacked vertically on mobile devices.
-- **Data Storage:** The backend stores sensor data in a MongoDB database.
-- **Secure Communication:** Data is sent from the ESP8266 to the backend using HTTPS.
+- Next.js (React.js framework)
+- Chart.js or Recharts (for graph visualisation)
+- WebSocket Client
+- Axios (for API requests)
 
-## Tech Stack
+## 🛠️ Installation
 
-### Backend (Node.js)
-- **Express.js:** For handling API routes.
-- **Mongoose:** For interacting with MongoDB.
-- **CORS:** To allow cross-origin requests.
-- **dotenv:** For managing environment variables.
+1. Clone this repository:
+```sh
+git clone https://github.com/storres20/bio-data-nextjs.git
+```
 
-### Frontend (Next.js)
-- **React.js:** For building the user interface.
-- **Chart.js and react-chartjs-2:** For rendering dynamic graphs.
-- **Tailwind CSS:** For styling the application.
+2. Install dependencies:
+```sh
+pnpm install
+```
 
-### IoT Device
-- **ESP8266 NodeMCU:** For collecting temperature and humidity data and sending it to the backend server.
-- **DS18B20 Sensor:** For measuring temperature.
+
+3. Create a `.env.local` file with the backend API URL:
+NEXT_PUBLIC_API_URL=http://your-backend-server-url
+
+
+4. Run the development server:
+```sh
+pnpm dev
+```
+
+## 📚 Related Repositories
+
+- [TEMPHU Backend Server (Node.js)](https://github.com/storres20/bio-data)
+
+## 📜 License
+
+This project is licensed under the MIT License.  
+See the [LICENSE](../LICENSE) file for more details.
+
+![temphuweb01](https://github.com/user-attachments/assets/870c6bcf-cf79-4070-8070-e88729208b78)
+
+![temphuweb02](https://github.com/user-attachments/assets/898a73b8-ffe2-40b0-bf5e-bf582ad51f7f)
