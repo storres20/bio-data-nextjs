@@ -45,7 +45,7 @@ pnpm dev
 ## 📜 License
 
 This project is licensed under the MIT License.  
-See the [LICENSE](../LICENSE) file for more details.
+See the [LICENSE](https://github.com/storres20/bio-data-nextjs/blob/main/LICENSE.txt) file for more details.
 
 ![temphuweb01](https://github.com/user-attachments/assets/870c6bcf-cf79-4070-8070-e88729208b78)
 
