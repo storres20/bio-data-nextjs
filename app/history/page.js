@@ -28,10 +28,10 @@ export default function HistoryPage() {
     const fetchHistory = () => {
         if (!selectedDevice) return;
         const url = new URL(`${apiBase}/api/v1/datas/by-device/${selectedDevice}`);
-        if (from && to) {
-            url.searchParams.append('from', from);
-            url.searchParams.append('to', to);
-        }
+
+        if (from) url.searchParams.append('from', `${from}T00:00:00`);
+        if (to)   url.searchParams.append('to', `${to}T23:59:59`);
+
         fetch(url)
             .then(res => res.json())
             .then(setData);
