@@ -27,21 +27,39 @@ export default function HistoryPage() {
 
     const fetchHistory = () => {
         if (!selectedDevice) return;
+
         const url = new URL(`${apiBase}/api/v1/datas/by-device/${selectedDevice}`);
 
-        if (from) url.searchParams.append('from', `${from}T00:00:00`);
-        if (to)   url.searchParams.append('to', `${to}T23:59:59`);
+        if (from) {
+            const fromISO = new Date(`${from}T00:00:00`).toISOString(); // UTC ISO
+            url.searchParams.append('from', fromISO);
+        }
+
+        if (to) {
+            const toISO = new Date(`${to}T23:59:59`).toISOString(); // UTC ISO
+            url.searchParams.append('to', toISO);
+        }
 
         fetch(url)
-            .then(res => res.json())
-            .then(setData);
+            .then(async (res) => {
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(`Error ${res.status}: ${text}`);
+                }
+                return res.json();
+            })
+            .then(setData)
+            .catch(err => {
+                console.error('❌ Fetch history error:', err.message);
+                setData([]);
+            });
     };
 
     const formatUTCDate = (isoDatetime) => {
         const formatter = new Intl.DateTimeFormat('es-PE', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit',
-            hour12: true, timeZone: 'UTC'
+            hour12: true, timeZone: 'America/Lima' // ✅ hora de Perú
         });
         return formatter.format(new Date(isoDatetime));
     };
@@ -103,7 +121,7 @@ export default function HistoryPage() {
                 <table className="min-w-full table-auto border">
                     <thead>
                     <tr className="bg-gray-200 text-center">
-                        <th className="px-4 py-2">Datetime (UTC)</th>
+                        <th className="px-4 py-2">Datetime PERU (UTC-5)</th>
                         <th className="px-4 py-2">Temperature</th>
                         <th className="px-4 py-2">Humidity</th>
                         <th className="px-4 py-2">DS Temp</th>
