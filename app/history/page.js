@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
@@ -12,7 +12,6 @@ export default function HistoryPage() {
     const [data, setData] = useState([]);
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
-    const chartRefs = useRef({});
 
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
     //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
@@ -23,7 +22,7 @@ export default function HistoryPage() {
                 .then(res => res.json())
                 .then(setDevices);
         }
-    }, [hydrated, user]);
+    }, [hydrated, user, apiBase]);
 
     const fetchHistory = () => {
         if (!selectedDevice) return;
@@ -93,6 +92,8 @@ export default function HistoryPage() {
         }],
     });
 
+    const selectedDeviceInfo = devices.find(dev => dev._id === selectedDevice);
+
     return (
         <div className="p-4">
             <h1 className="text-2xl font-bold mb-4">Historical Data by Device</h1>
@@ -110,10 +111,21 @@ export default function HistoryPage() {
                 <button onClick={fetchHistory} className="bg-blue-500 text-white px-4 py-2 rounded">Search</button>
             </div>
 
-            {data.length > 0 && (
-                <button onClick={generatePDF} className="mb-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                    Download PDF Report
-                </button>
+            {data.length > 0 && selectedDeviceInfo && (
+                <div>
+                    <button onClick={generatePDF} className="mb-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        Download PDF Report
+                    </button>
+
+                    <div className="mb-4">
+                        <p><strong>Hospital: </strong>{user.hospital.name}</p>
+                        <p><strong>Area: </strong>{user.area.name}</p>
+                        <p><strong>Device: </strong>{selectedDeviceInfo.name}</p>
+                        <p><strong>Model: </strong>{selectedDeviceInfo.model}</p>
+                        <p><strong>Brand: </strong>{selectedDeviceInfo.brand}</p>
+                        <p><strong>Serie: </strong>{selectedDeviceInfo.serie}</p>
+                    </div>
+                </div>
             )}
 
             {/* 🧾 Tabla */}
@@ -122,18 +134,18 @@ export default function HistoryPage() {
                     <thead>
                     <tr className="bg-gray-200 text-center">
                         <th className="px-4 py-2">Datetime PERU (UTC-5)</th>
-                        <th className="px-4 py-2">Temperature</th>
-                        <th className="px-4 py-2">Humidity</th>
-                        <th className="px-4 py-2">DS Temp</th>
+                        <th className="px-4 py-2">Temp.OUT</th>
+                        <th className="px-4 py-2">Temp.IN</th>
+                        <th className="px-4 py-2">Hum.IN</th>
                     </tr>
                     </thead>
                     <tbody>
                     {data.map((d, i) => (
                         <tr key={i} className="text-center">
                             <td className="px-4 py-2">{formatUTCDate(d.datetime)}</td>
+                            <td className="px-4 py-2">{d.dsTemperature} °C</td>
                             <td className="px-4 py-2">{d.temperature} °C</td>
                             <td className="px-4 py-2">{d.humidity} %</td>
-                            <td className="px-4 py-2">{d.dsTemperature} °C</td>
                         </tr>
                     ))}
                     </tbody>
@@ -146,19 +158,19 @@ export default function HistoryPage() {
                     <h2 className="text-lg font-bold mb-4">Gráficas del {day}</h2>
 
                     <div className="w-full">
+                        {/* DS Temp Chart */}
+                        <div className="w-full h-[300px] md:h-[400px]">
+                            <Line data={chartData("Temp.OUT (°C)", "dsTemperature", 'green', dayData)} />
+                        </div>
+
                         {/* Temperature Chart */}
                         <div className="w-full h-[300px] md:h-[400px]">
-                            <Line data={chartData("Temperature (°C)", "temperature", 'red', dayData)} />
+                            <Line data={chartData("Temp.IN (°C)", "temperature", 'red', dayData)} />
                         </div>
 
                         {/* Humidity Chart */}
                         <div className="w-full h-[300px] md:h-[400px]">
-                            <Line data={chartData("Humidity (%)", "humidity", 'blue', dayData)} />
-                        </div>
-
-                        {/* DS Temp Chart */}
-                        <div className="w-full h-[300px] md:h-[400px]">
-                            <Line data={chartData("DS18B20 Temp (°C)", "dsTemperature", 'green', dayData)} />
+                            <Line data={chartData("Hum.IN (%)", "humidity", 'blue', dayData)} />
                         </div>
                     </div>
                 </div>
