@@ -193,10 +193,10 @@ export default function DataPage() {
                     )}
 
                     <h2 className="text-xl font-semibold mb-2">Details for {selectedUser}</h2>
-                    <p><strong>DS18B20 Temp:</strong> {connectedUsers.get(selectedUser)?.dsTemperature} °C</p>
-                    <p><strong>Temperature:</strong> {connectedUsers.get(selectedUser)?.temperature} °C</p>
-                    <p><strong>Humidity:</strong> {connectedUsers.get(selectedUser)?.humidity} %</p>
                     <p><strong>Datetime:</strong> {connectedUsers.get(selectedUser)?.datetime}</p>
+                    <p><strong>Temp.OUT:</strong> {connectedUsers.get(selectedUser)?.dsTemperature} °C</p>
+                    <p><strong>Temp.IN:</strong> {connectedUsers.get(selectedUser)?.temperature} °C</p>
+                    <p><strong>Hum.IN:</strong> {connectedUsers.get(selectedUser)?.humidity} %</p>
 
                     {/* Device info */}
                     {connectedUsers.get(selectedUser)?.device && (
@@ -211,13 +211,13 @@ export default function DataPage() {
                     {/* Charts */}
                     <div className="grid grid-rows-3 gap-4 h-full w-full mt-4">
                         <div className="row-span-1 h-64">
-                            <Line data={getChartData("DS18B20 Temperature (°C)", connectedUsers.get(selectedUser)?.dsTemperatureHistory, 'rgba(75, 192, 192, 1)')} options={chartOptions} />
+                            <Line data={getChartData("Temp.OUT (°C)", connectedUsers.get(selectedUser)?.dsTemperatureHistory, 'rgba(75, 192, 192, 1)')} options={chartOptions} />
                         </div>
                         <div className="row-span-1 h-64">
-                            <Line data={getChartData("Temperature (°C)", connectedUsers.get(selectedUser)?.temperatureHistory, 'rgba(255, 99, 132, 1)')} options={chartOptions} />
+                            <Line data={getChartData("Temp.IN (°C)", connectedUsers.get(selectedUser)?.temperatureHistory, 'rgba(255, 99, 132, 1)')} options={chartOptions} />
                         </div>
                         <div className="row-span-1 h-64">
-                            <Line data={getChartData("Humidity (%)", connectedUsers.get(selectedUser)?.humidityHistory, 'rgba(54, 162, 235, 1)')} options={chartOptions} />
+                            <Line data={getChartData("Hum.IN (%)", connectedUsers.get(selectedUser)?.humidityHistory, 'rgba(54, 162, 235, 1)')} options={chartOptions} />
                         </div>
                     </div>
                 </div>
@@ -235,10 +235,11 @@ export default function DataPage() {
                                          setSelectedUserWarning(data.warningMessage);
                                      }}>
                                     <h2 className="text-xl font-semibold">{user}</h2>
-                                    <p><strong>DS18B20 Temp:</strong> {data.dsTemperature} °C</p>
-                                    <p><strong>Temperature:</strong> {data.temperature} °C</p>
-                                    <p><strong>Humidity:</strong> {data.humidity} %</p>
                                     <p><strong>Datetime:</strong> {data.datetime}</p>
+                                    {/*<p><strong>User:</strong> {user}</p>*/}
+                                    <p><strong>Temp.OUT:</strong> {data.dsTemperature} °C</p>
+                                    <p><strong>Temp.IN:</strong> {data.temperature} °C</p>
+                                    <p><strong>Hum.IN:</strong> {data.humidity} %</p>
 
                                     {data.device && (
                                         <div className="mt-2 text-sm text-gray-700">
