@@ -191,8 +191,8 @@ export default function DataPage() {
                             The data displayed comes from the MHUTEMP device:
                             <br /><br />
                             <strong>Temp.OUT:</strong> Temperature measured by the probe placed inside the equipment (e.g., blood bank refrigerator).<br />
-                            <strong>Temp.IN:</strong> Ambient temperature measured by the DHT22 sensor.<br />
-                            <strong>Hum.IN:</strong> Ambient humidity measured by the DHT22 sensor.<br /><br />
+                            <strong>Temp.IN:</strong> Ambient temperature.<br />
+                            <strong>Hum.IN:</strong> Ambient humidity.<br /><br />
                             These readings help monitor and ensure that biomedical refrigerators and blood bank chambers remain within the appropriate ranges.
                         </p>
                     </div>
