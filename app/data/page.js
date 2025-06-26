@@ -5,6 +5,7 @@ import WebSocket from 'isomorphic-ws';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 export default function DataPage() {
     const { user, token, hydrated } = useAuth();
@@ -169,26 +170,29 @@ export default function DataPage() {
             </button>
 
             {showInfoModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg max-w-2xl shadow-lg relative">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white p-4 sm:p-6 rounded-lg w-full max-w-lg sm:max-w-2xl shadow-lg relative overflow-y-auto max-h-[90vh]">
                         <button
                             onClick={() => setShowInfoModal(false)}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-black"
+                            className="absolute top-2 right-2 text-gray-500 hover:text-black text-lg"
                         >
                             ✖
                         </button>
-                        <h2 className="text-xl font-bold mb-4">Understanding the Data</h2>
-                        <img
+                        <h2 className="text-xl font-bold mb-4 mt-2 sm:mt-0">Understanding the Data</h2>
+                        <Image
                             src="/images/mhutemp001.png"
                             alt="MHUTEMP sensor explanation"
-                            className="w-full rounded mb-4"
+                            width={800}
+                            height={600}
+                            className="w-full h-auto rounded mb-4"
                         />
-                        <p className="text-sm text-gray-700">
+
+                        <p className="text-sm text-gray-700 leading-relaxed">
                             The data displayed comes from the MHUTEMP device:
                             <br /><br />
                             <strong>Temp.OUT:</strong> Temperature measured by the probe placed inside the equipment (e.g., blood bank refrigerator).<br />
-                            <strong>Temp.IN:</strong> Ambient temperature.<br />
-                            <strong>Hum.IN:</strong> Ambient humidity.<br /><br />
+                            <strong>Temp.IN:</strong> Ambient temperature measured by the DHT22 sensor.<br />
+                            <strong>Hum.IN:</strong> Ambient humidity measured by the DHT22 sensor.<br /><br />
                             These readings help monitor and ensure that biomedical refrigerators and blood bank chambers remain within the appropriate ranges.
                         </p>
                     </div>
