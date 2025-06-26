@@ -5,7 +5,6 @@ import WebSocket from 'isomorphic-ws';
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { useAuth } from '@/context/AuthContext';
-import Image from 'next/image';
 
 export default function DataPage() {
     const { user, token, hydrated } = useAuth();
@@ -179,11 +178,9 @@ export default function DataPage() {
                             ✖
                         </button>
                         <h2 className="text-xl font-bold mb-4 mt-2 sm:mt-0">Understanding the Data</h2>
-                        <Image
+                        <img
                             src="/images/mhutemp001.png"
                             alt="MHUTEMP sensor explanation"
-                            width={800}
-                            height={600}
                             className="w-full h-auto rounded mb-4"
                         />
 
