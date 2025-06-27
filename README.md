@@ -1,6 +1,6 @@
-# TEMPHU Frontend Application
+# MHUTEMP Frontend Application
 
-This is the frontend application of the **TEMPHU** project, providing a real-time dashboard and historical data view for temperature and humidity monitoring.
+This is the frontend application of the **MHUTEMP** project, providing a real-time dashboard and historical data view for temperature and humidity monitoring.
 
 ## 🚀 Features
 
@@ -40,7 +40,7 @@ pnpm dev
 
 ## 📚 Related Repositories
 
-- [TEMPHU Backend Server (Node.js)](https://github.com/storres20/bio-data)
+- [MHUTEMP Backend Server (Node.js)](https://github.com/storres20/bio-data)
 
 ## 📜 License
 
