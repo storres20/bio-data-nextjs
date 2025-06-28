@@ -18,7 +18,6 @@ export default function DataPage() {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
     //const apiBase = process.env.NEXT_PUBLIC_API_BASE_LOCAL;
 
-    // 🔒 Redirect if not authenticated
     useEffect(() => {
         if (hydrated && !token) {
             window.location.href = '/login';
@@ -43,8 +42,27 @@ export default function DataPage() {
         socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
 
-            let assignedDevice = null;
+            try {
+                const resAll = await fetch(`${apiBase}/api/simulations`);
+                const validSimulations = await resAll.json();
+                const validUsernames = validSimulations.map(sim => sim.username);
 
+                setConnectedUsers((prev) => {
+                    const updated = new Map();
+                    prev.forEach((value, key) => {
+                        if (validUsernames.includes(key)) {
+                            updated.set(key, value);
+                        } else {
+                            console.log(`🧹 Eliminado del frontend: ${key} (ya no está en Simulation)`);
+                        }
+                    });
+                    return updated;
+                });
+            } catch (e) {
+                console.warn('❌ No se pudo obtener lista de simuladores:', e.message);
+            }
+
+            let assignedDevice = null;
             try {
                 const res = await fetch(`${apiBase}/api/devices/by-sensor/${data.username}`);
                 if (res.ok) {
@@ -82,7 +100,7 @@ export default function DataPage() {
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
                     })],
                     warningMessage: warning,
-                    device: assignedDevice, // 👈 se incluye el dispositivo asignado
+                    device: assignedDevice,
                 });
 
                 return updated;
