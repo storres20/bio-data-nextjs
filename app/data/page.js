@@ -49,6 +49,15 @@ export default function DataPage() {
         socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
 
+            // 🛑 Ignorar si no hay datos válidos (por ejemplo, frontend que solo envía username)
+            if (
+                typeof data.temperature !== 'number' ||
+                typeof data.humidity !== 'number' ||
+                typeof data.dsTemperature !== 'number'
+            ) {
+                return;
+            }
+
             let assignedDevice = null;
             try {
                 const res = await fetch(`${apiBase}/api/devices/by-sensor/${data.username}`);
