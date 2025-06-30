@@ -1,10 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-//import WebSocket from 'isomorphic-ws';
-// ❌ NO importes WebSocket en frontend
-// Usa el WebSocket global del navegador directamente
-
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { useAuth } from '@/context/AuthContext';
@@ -38,16 +34,22 @@ export default function DataPage() {
     };
 
     useEffect(() => {
+        if (!hydrated || !user?.username) return;
+
         const socket = new WebSocket('wss://bio-data-production.up.railway.app');
         ws.current = socket;
 
-        socket.onopen = () => console.log('WebSocket connected.');
+        socket.onopen = () => {
+            console.log('WebSocket connected.');
+            const intro = JSON.stringify({ username: user.username });
+            socket.send(intro);
+            console.log('📨 Username enviado:', user.username);
+        };
 
         socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
 
             let assignedDevice = null;
-
             try {
                 const res = await fetch(`${apiBase}/api/devices/by-sensor/${data.username}`);
                 if (res.ok) {
@@ -85,7 +87,7 @@ export default function DataPage() {
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
                     })],
                     warningMessage: warning,
-                    device: assignedDevice, // 👈 se incluye el dispositivo asignado
+                    device: assignedDevice,
                 });
 
                 return updated;
@@ -98,7 +100,7 @@ export default function DataPage() {
         return () => {
             if (ws.current) ws.current.close();
         };
-    }, [apiBase]);
+    }, [hydrated, user, apiBase]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -155,7 +157,6 @@ export default function DataPage() {
 
     return (
         <div className="flex flex-col min-h-screen p-4">
-            {/* Show Hospital and Area Name */}
             <div className="mb-4">
                 <h1 className="text-2xl font-bold">Welcome, {user.username}</h1>
                 <p className="text-gray-700">
@@ -186,7 +187,6 @@ export default function DataPage() {
                             alt="MHUTEMP sensor explanation"
                             className="w-full h-auto rounded mb-4"
                         />
-
                         <p className="text-sm text-gray-700 leading-relaxed">
                             The data displayed comes from the MHUTEMP device:
                             <br /><br />
@@ -199,7 +199,6 @@ export default function DataPage() {
                 </div>
             )}
 
-            {/* Search Bar */}
             {!selectedUser && (
                 <div className="mb-4">
                     <input
@@ -212,7 +211,6 @@ export default function DataPage() {
                 </div>
             )}
 
-            {/* Selected User View */}
             {selectedUser ? (
                 <div className="p-4 bg-white rounded shadow border border-gray-300">
                     <button
@@ -237,7 +235,6 @@ export default function DataPage() {
                     <p><strong>Temp.IN:</strong> {connectedUsers.get(selectedUser)?.temperature} °C</p>
                     <p><strong>Hum.IN:</strong> {connectedUsers.get(selectedUser)?.humidity} %</p>
 
-                    {/* Device info */}
                     {connectedUsers.get(selectedUser)?.device && (
                         <div className="mt-2 text-sm text-gray-700">
                             <p><strong>Device:</strong> {connectedUsers.get(selectedUser).device.name}</p>
@@ -247,7 +244,6 @@ export default function DataPage() {
                         </div>
                     )}
 
-                    {/* Charts */}
                     <div className="grid grid-rows-3 gap-4 h-full w-full mt-4">
                         <div className="row-span-1 h-64">
                             <Line data={getChartData("Temp.OUT (°C)", connectedUsers.get(selectedUser)?.dsTemperatureHistory, 'rgba(75, 192, 192, 1)')} options={chartOptions} />
@@ -275,7 +271,6 @@ export default function DataPage() {
                                      }}>
                                     <h2 className="text-xl font-semibold">{user}</h2>
                                     <p><strong>Datetime:</strong> {data.datetime}</p>
-                                    {/*<p><strong>User:</strong> {user}</p>*/}
                                     <p><strong>Temp.OUT:</strong> {data.dsTemperature} °C</p>
                                     <p><strong>Temp.IN:</strong> {data.temperature} °C</p>
                                     <p><strong>Hum.IN:</strong> {data.humidity} %</p>
