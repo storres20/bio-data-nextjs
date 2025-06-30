@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import WebSocket from 'isomorphic-ws';
+//import WebSocket from 'isomorphic-ws';
+// ❌ NO importes WebSocket en frontend
+// Usa el WebSocket global del navegador directamente
+
 import { Line } from 'react-chartjs-2';
 import 'chart.js/auto';
 import { useAuth } from '@/context/AuthContext';
