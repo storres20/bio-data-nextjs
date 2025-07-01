@@ -70,9 +70,16 @@ export default function HistoryPage() {
 
     const groupByDay = (dataset) => {
         return dataset.reduce((acc, item) => {
-            const date = item.datetime.slice(0, 10);
-            if (!acc[date]) acc[date] = [];
-            acc[date].push(item);
+            // Convertimos a hora de Perú antes de extraer la fecha
+            const localDate = new Date(item.datetime).toLocaleDateString('es-PE', {
+                timeZone: 'America/Lima',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            if (!acc[localDate]) acc[localDate] = [];
+            acc[localDate].push(item);
             return acc;
         }, {});
     };
