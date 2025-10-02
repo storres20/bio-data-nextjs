@@ -106,7 +106,16 @@ export default function DataPage() {
         socket.onclose = () => console.log('WebSocket closed.');
         socket.onerror = (err) => console.error('WebSocket error:', err);
 
+        // Agregar intervalo de ping cada 30 segundos
+        const pingInterval = setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'ping' }));
+                console.log('📶 Ping enviado al servidor');
+            }
+        }, 30000);
+
         return () => {
+            clearInterval(pingInterval);
             if (ws.current) ws.current.close();
         };
     }, [hydrated, user, apiBase]);

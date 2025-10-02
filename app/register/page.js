@@ -24,7 +24,7 @@ export default function Register() {
         fetch(`${apiBase}/api/auth/areas`)
             .then((res) => res.json())
             .then((data) => setAreas(data));
-    }, []);
+    }, [apiBase]);
 
     const handleRegister = async () => {
         const response = await fetch(`${apiBase}/api/auth/register`, {
