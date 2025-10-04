@@ -62,7 +62,7 @@ export default function HistoryPage() {
                 }
             })
             .catch(err => {
-                console.error('❌ Fetch history error:', err.message);
+                console.error('Fetch history error:', err.message);
                 setError('Failed to load data. Please try again.');
                 setData([]);
                 setLoading(false);
@@ -416,6 +416,9 @@ export default function HistoryPage() {
                                     <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                                         Hum.IN
                                     </th>
+                                    <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                        Door Status
+                                    </th>
                                 </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -425,19 +428,34 @@ export default function HistoryPage() {
                                             {formatUTCDate(d.datetime)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-cyan-100 text-cyan-800">
-                                                    {d.dsTemperature} °C
-                                                </span>
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-cyan-100 text-cyan-800">
+                                                {d.dsTemperature} °C
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-800">
-                                                    {d.temperature} °C
-                                                </span>
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-800">
+                                                {d.temperature} °C
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
-                                                    {d.humidity} %
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
+                                                {d.humidity} %
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            {d.doorStatus === 'open' ? (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
+                                                    Open
                                                 </span>
+                                            ) : d.doorStatus === 'closed' ? (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                                                    Closed
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-800">
+                                                    Unknown
+                                                </span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -482,7 +500,8 @@ export default function HistoryPage() {
                                 </h3>
                                 <div className="bg-white rounded-lg p-4">
                                     <div className="h-80">
-                                        <Line data={chartData("Temp.IN (°C)", "temperature", 'rgba(244, 63, 94, 1)', dayData)} options={chartOptions} />
+                                        <Line data={chartData("Temp.IN (°C)", "temperature", 'rgba(244, 63, 94, 1)', dayData)} options={chartOptions}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -499,6 +518,7 @@ export default function HistoryPage() {
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 ))}
@@ -558,4 +578,3 @@ export default function HistoryPage() {
         </div>
     );
 }
-

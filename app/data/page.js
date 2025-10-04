@@ -16,7 +16,6 @@ export default function DataPage() {
 
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
 
-    // 🔒 Redirect if not authenticated
     useEffect(() => {
         if (hydrated && !token) {
             window.location.href = '/login';
@@ -84,6 +83,7 @@ export default function DataPage() {
                     dsTemperature: data.dsTemperature,
                     temperature: data.temperature,
                     humidity: data.humidity,
+                    doorStatus: data.doorStatus || 'unknown',
                     datetime: new Date(data.datetime).toLocaleString('en-GB', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -106,7 +106,6 @@ export default function DataPage() {
         socket.onclose = () => console.log('WebSocket closed.');
         socket.onerror = (err) => console.error('WebSocket error:', err);
 
-        // Agregar intervalo de ping cada 30 segundos
         const pingInterval = setInterval(() => {
             if (socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'ping' }));
@@ -217,9 +216,54 @@ export default function DataPage() {
         },
     };
 
+    const getDoorStatusConfig = (status) => {
+        if (status === 'open') {
+            return {
+                bgColor: 'bg-red-100',
+                borderColor: 'border-red-400',
+                textColor: 'text-red-800',
+                iconColor: 'text-red-600',
+                label: 'OPEN',
+                icon: (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                ),
+                pulse: true
+            };
+        } else if (status === 'closed') {
+            return {
+                bgColor: 'bg-green-100',
+                borderColor: 'border-green-400',
+                textColor: 'text-green-800',
+                iconColor: 'text-green-600',
+                label: 'CLOSED',
+                icon: (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                ),
+                pulse: false
+            };
+        } else {
+            return {
+                bgColor: 'bg-gray-100',
+                borderColor: 'border-gray-400',
+                textColor: 'text-gray-800',
+                iconColor: 'text-gray-600',
+                label: 'UNKNOWN',
+                icon: (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                ),
+                pulse: false
+            };
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-            {/* Header */}
             <div className="bg-white border-b border-gray-200 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center justify-between">
@@ -245,7 +289,6 @@ export default function DataPage() {
                 </div>
             </div>
 
-            {/* Hospital Info Banner */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center gap-6">
@@ -274,7 +317,6 @@ export default function DataPage() {
                 </div>
             </div>
 
-            {/* Info Modal */}
             {showInfoModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-slideUp">
@@ -305,22 +347,22 @@ export default function DataPage() {
                                     The MHUTEMP device provides critical monitoring data for biomedical equipment:
                                 </p>
                                 <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r">
-                                    <p className="font-semibold text-blue-900 mb-2">📊 Temp.OUT (Probe Temperature)</p>
+                                    <p className="font-semibold text-blue-900 mb-2">Temp.OUT (Probe Temperature)</p>
                                     <p className="text-sm">Temperature measured by the external probe placed inside the equipment (e.g., blood bank refrigerator, vaccine storage).</p>
                                 </div>
                                 <div className="bg-green-50 border-l-4 border-green-600 p-4 rounded-r">
-                                    <p className="font-semibold text-green-900 mb-2">🌡️ Temp.IN (Ambient Temperature)</p>
+                                    <p className="font-semibold text-green-900 mb-2">Temp.IN (Ambient Temperature)</p>
                                     <p className="text-sm">Temperature of the surrounding environment where the device is located.</p>
                                 </div>
                                 <div className="bg-purple-50 border-l-4 border-purple-600 p-4 rounded-r">
-                                    <p className="font-semibold text-purple-900 mb-2">💧 Hum.IN (Ambient Humidity)</p>
+                                    <p className="font-semibold text-purple-900 mb-2">Hum.IN (Ambient Humidity)</p>
                                     <p className="text-sm">Relative humidity percentage of the surrounding environment.</p>
                                 </div>
                                 <div className="bg-amber-50 border border-amber-300 p-4 rounded-lg mt-4">
-                                    <p className="font-semibold text-amber-900 mb-2">⚠️ Safe Operating Ranges</p>
+                                    <p className="font-semibold text-amber-900 mb-2">Safe Operating Ranges</p>
                                     <ul className="text-sm space-y-1">
-                                        <li>• <strong>Temp.OUT:</strong> 2°C - 6°C (Blood storage)</li>
-                                        <li>• <strong>Humidity:</strong> 30% - 60%</li>
+                                        <li>Temp.OUT: 2°C - 6°C (Blood storage)</li>
+                                        <li>Humidity: 30% - 60%</li>
                                     </ul>
                                 </div>
                             </div>
@@ -329,10 +371,8 @@ export default function DataPage() {
                 </div>
             )}
 
-            {/* Main Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 {selectedUser ? (
-                    /* Detail View */
                     <div className="space-y-6">
                         <button
                             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm font-medium text-gray-700"
@@ -372,7 +412,33 @@ export default function DataPage() {
                             </div>
 
                             <div className="p-6">
-                                {/* Current Readings */}
+                                {(() => {
+                                    const doorConfig = getDoorStatusConfig(connectedUsers.get(selectedUser)?.doorStatus);
+                                    return (
+                                        <div className={`${doorConfig.bgColor} ${doorConfig.borderColor} border-2 rounded-xl p-5 mb-6 shadow-lg ${doorConfig.pulse ? 'animate-pulse' : ''}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`${doorConfig.iconColor} bg-white rounded-full p-3 shadow-md`}>
+                                                        {doorConfig.icon}
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-xs font-semibold ${doorConfig.textColor} uppercase tracking-wide mb-1`}>Door Status</p>
+                                                        <p className={`text-3xl font-bold ${doorConfig.textColor}`}>{doorConfig.label}</p>
+                                                    </div>
+                                                </div>
+                                                {doorConfig.pulse && (
+                                                    <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-bold">
+                                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                        ATTENTION
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                                         <div className="flex items-center justify-between mb-2">
@@ -415,7 +481,6 @@ export default function DataPage() {
                                     </div>
                                 </div>
 
-                                {/* Device Info */}
                                 {connectedUsers.get(selectedUser)?.device && (
                                     <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -445,7 +510,6 @@ export default function DataPage() {
                                     </div>
                                 )}
 
-                                {/* Charts */}
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-lg border border-gray-200 p-4">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -481,7 +545,6 @@ export default function DataPage() {
                         </div>
                     </div>
                 ) : (
-                    /* Overview Grid */
                     <>
                         <div className="mb-6">
                             <div className="relative">
@@ -500,7 +563,6 @@ export default function DataPage() {
                             </div>
                         </div>
 
-                        {/* Stats Overview */}
                         <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -519,19 +581,20 @@ export default function DataPage() {
                             </div>
                         </div>
 
-                        {/* Device Cards Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[...connectedUsers.entries()]
                                 .filter(([user]) => user.toLowerCase().includes(searchQuery))
                                 .map(([user, data]) => {
                                     const hasWarning = data.warningMessage;
                                     const isCriticalTemp = data.dsTemperature > 6 || data.dsTemperature < 2;
+                                    const doorConfig = getDoorStatusConfig(data.doorStatus);
+                                    const isDoorOpen = data.doorStatus === 'open';
 
                                     return (
                                         <div
                                             key={user}
                                             className={`group relative rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer hover:shadow-xl hover:scale-[1.02] overflow-hidden ${
-                                                hasWarning
+                                                hasWarning || isDoorOpen
                                                     ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-400 hover:border-red-500'
                                                     : 'bg-white border-gray-200 hover:border-blue-400'
                                             }`}
@@ -540,8 +603,7 @@ export default function DataPage() {
                                                 setSelectedUserWarning(data.warningMessage);
                                             }}
                                         >
-                                            {/* Warning Badge */}
-                                            {hasWarning && (
+                                            {(hasWarning || isDoorOpen) && (
                                                 <div className="absolute top-0 right-0 bg-red-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1 shadow-lg animate-pulse">
                                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -550,9 +612,7 @@ export default function DataPage() {
                                                 </div>
                                             )}
 
-                                            {/* Card Content */}
                                             <div className="p-6">
-                                                {/* Header */}
                                                 <div className="flex items-start justify-between mb-4">
                                                     <div className="flex-1">
                                                         <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -568,12 +628,29 @@ export default function DataPage() {
                                                             {data.datetime}
                                                         </p>
                                                     </div>
-                                                    <div className={`w-3 h-3 rounded-full ${hasWarning ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
+                                                    <div className={`w-3 h-3 rounded-full ${hasWarning || isDoorOpen ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
                                                 </div>
 
-                                                {/* Readings */}
+                                                <div className={`${doorConfig.bgColor} ${doorConfig.borderColor} border-2 rounded-lg p-3 mb-3 ${doorConfig.pulse ? 'animate-pulse' : ''}`}>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={doorConfig.iconColor}>
+                                                                {doorConfig.icon}
+                                                            </div>
+                                                            <div>
+                                                                <p className={`text-xs font-semibold ${doorConfig.textColor} uppercase`}>Door</p>
+                                                                <p className={`text-lg font-bold ${doorConfig.textColor}`}>{doorConfig.label}</p>
+                                                            </div>
+                                                        </div>
+                                                        {isDoorOpen && (
+                                                            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                </div>
+
                                                 <div className="space-y-3 mb-4">
-                                                    {/* Temp OUT */}
                                                     <div className={`rounded-lg p-3 ${isCriticalTemp ? 'bg-red-100 border border-red-300' : 'bg-cyan-50 border border-cyan-200'}`}>
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-xs font-semibold text-gray-700 uppercase">Temp.OUT</span>
@@ -585,11 +662,10 @@ export default function DataPage() {
                                                             {data.dsTemperature} <span className="text-sm">°C</span>
                                                         </p>
                                                         {isCriticalTemp && (
-                                                            <p className="text-xs text-red-700 mt-1 font-medium">⚠️ Out of range (2-6°C)</p>
+                                                            <p className="text-xs text-red-700 mt-1 font-medium">Out of range (2-6°C)</p>
                                                         )}
                                                     </div>
 
-                                                    {/* Temp IN & Humidity */}
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
                                                             <span className="text-xs font-semibold text-gray-700 uppercase block mb-1">Temp.IN</span>
@@ -602,7 +678,6 @@ export default function DataPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* Device Info */}
                                                 {data.device && (
                                                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                                                         <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase">Equipment</h4>
@@ -627,7 +702,6 @@ export default function DataPage() {
                                                     </div>
                                                 )}
 
-                                                {/* View Details Arrow */}
                                                 <div className="mt-4 flex items-center justify-end text-blue-600 font-medium text-sm group-hover:text-blue-700">
                                                     <span>View Details</span>
                                                     <svg className="w-5 h-5 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -640,7 +714,6 @@ export default function DataPage() {
                                 })}
                         </div>
 
-                        {/* Empty State */}
                         {connectedUsers.size === 0 && (
                             <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
                                 <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -651,7 +724,6 @@ export default function DataPage() {
                             </div>
                         )}
 
-                        {/* No Search Results */}
                         {connectedUsers.size > 0 && [...connectedUsers.entries()].filter(([user]) => user.toLowerCase().includes(searchQuery)).length === 0 && (
                             <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-200">
                                 <svg className="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -665,7 +737,6 @@ export default function DataPage() {
                 )}
             </div>
 
-            {/* Footer */}
             <div className="bg-white border-t border-gray-200 mt-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
