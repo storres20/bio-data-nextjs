@@ -26,7 +26,7 @@ export default function DataPage() {
         let message = '';
         if (latestDsTemp > 6) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) exceeds maximum threshold (6°C). `;
         if (latestDsTemp < 2) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) below minimum threshold (2°C). `;
-        if (latestHum > 60) message += `⚠️ Humidity (${latestHum}%) exceeds maximum threshold (60%). `;
+        if (latestHum > 90) message += `⚠️ Humidity (${latestHum}%) exceeds maximum threshold (90%). `;
         if (latestHum < 30) message += `⚠️ Humidity (${latestHum}%) below minimum threshold (30%). `;
         return message;
     };
