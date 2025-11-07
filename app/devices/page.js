@@ -352,38 +352,66 @@ export default function DevicesPage() {
 
                                     {/* Sensor Assignment */}
                                     <div className="border-t border-gray-200 pt-4">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-                                            </svg>
-                                            Assign Sensor
-                                        </label>
-                                        <select
-                                            value={device.assigned_sensor_username || ''}
-                                            onChange={(e) => assignSensorToDevice(device._id, e.target.value, device.name)}
-                                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
-                                        >
-                                            <option value="">-- Select Sensor --</option>
-                                            {connectedSensors.map((username) => (
-                                                <option key={username} value={username}>
-                                                    {username}
-                                                </option>
-                                            ))}
-                                        </select>
-
-                                        {isAssigned && (
-                                            <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
-                                                <div className="flex items-start gap-2">
-                                                    <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        {!isAssigned ? (
+                                            <>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
                                                     </svg>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-green-900">Sensor Assigned</p>
-                                                        <p className="text-sm text-green-700 mt-1">
-                                                            <strong>{device.assigned_sensor_username}</strong>
-                                                        </p>
+                                                    Assign Sensor
+                                                </label>
+                                                <select
+                                                    value=""
+                                                    onChange={(e) => assignSensorToDevice(device._id, e.target.value, device.name)}
+                                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                                                >
+                                                    <option value="">-- Select Sensor --</option>
+                                                    {(() => {
+                                                        // Filtrar sensores ya asignados
+                                                        const assignedSensors = devices
+                                                            .filter(d => d.assigned_sensor_username)
+                                                            .map(d => d.assigned_sensor_username);
+
+                                                        const availableSensors = connectedSensors.filter(
+                                                            sensor => !assignedSensors.includes(sensor)
+                                                        );
+
+                                                        return availableSensors.length > 0 ? (
+                                                            availableSensors.map((username) => (
+                                                                <option key={username} value={username}>
+                                                                    {username}
+                                                                </option>
+                                                            ))
+                                                        ) : (
+                                                            <option disabled>No available sensors</option>
+                                                        );
+                                                    })()}
+                                                </select>
+                                            </>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                    <div className="flex items-start gap-2">
+                                                        <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-semibold text-green-900">Sensor Assigned</p>
+                                                            <p className="text-sm text-green-700 mt-1">
+                                                                <strong>{device.assigned_sensor_username}</strong>
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <button
+                                                    onClick={() => assignSensorToDevice(device._id, '', device.name)}
+                                                    className="w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                    Unassign Sensor
+                                                </button>
                                             </div>
                                         )}
                                     </div>
