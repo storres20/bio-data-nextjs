@@ -20,6 +20,11 @@ export default function DataPage() {
     const [loadingTodayData, setLoadingTodayData] = useState(false);
     //
 
+    // ⬇️ NUEVO: Estados para temperaturas extremas
+    const [tempExtremes, setTempExtremes] = useState({ min: null, max: null });
+    const [loadingExtremes, setLoadingExtremes] = useState(false);
+    //
+
     const ws = useRef(null);
 
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
@@ -147,14 +152,16 @@ export default function DataPage() {
     // ⬇️ NUEVO: useEffect para cargar datos del día actual
     useEffect(() => {
         const fetchTodayData = async () => {
-            if (!selectedUser || !connectedUsers.get(selectedUser)?.device) {
+            // Verificar si existe device ID directamente
+            const currentUserData = connectedUsers.get(selectedUser);
+            if (!selectedUser || !currentUserData?.device?._id) {
                 setTodayData([]);
                 return;
             }
 
             setLoadingTodayData(true);
             try {
-                const deviceId = connectedUsers.get(selectedUser).device._id;
+                const deviceId = currentUserData.device._id;
 
                 // Fecha de hoy en UTC-5 (Perú)
                 const now = new Date();
@@ -183,7 +190,39 @@ export default function DataPage() {
         // Actualizar cada 2 minutos
         const interval = setInterval(fetchTodayData, 120000);
         return () => clearInterval(interval);
-    }, [selectedUser, connectedUsers, apiBase]);
+    }, [selectedUser, apiBase]);  // ⬅️ QUITAR connectedUsers
+
+    // ⬇️ NUEVO: useEffect para temperaturas extremas (cada 10 minutos)
+    useEffect(() => {
+        const fetchTempExtremes = async () => {
+            if (!selectedUser) {
+                setTempExtremes({ min: null, max: null });
+                return;
+            }
+
+            setLoadingExtremes(true);
+            try {
+                const url = `${apiBase}/api/v1/datas/temp-extremes/${selectedUser}`;
+                const response = await fetch(url);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTempExtremes(data);
+                }
+            } catch (err) {
+                console.error('Error fetching temp extremes:', err);
+                setTempExtremes({ min: null, max: null });
+            } finally {
+                setLoadingExtremes(false);
+            }
+        };
+
+        fetchTempExtremes();
+
+        // Actualizar cada 10 minutos (600,000ms)
+        const interval = setInterval(fetchTempExtremes, 600000);
+        return () => clearInterval(interval);
+    }, [selectedUser, apiBase]);
 
     if (!hydrated || !user) return null;
 
@@ -498,7 +537,9 @@ export default function DataPage() {
                                     );
                                 })()}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                {/* CARDS */}
+                                {/* ⬇️ MODIFICADO: Grid con 6 columnas (4 existentes + 2 nuevas) */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
                                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Last Update</span>
@@ -506,7 +547,7 @@ export default function DataPage() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
-                                        <p className="text-lg font-bold text-gray-900">{connectedUsers.get(selectedUser)?.datetime}</p>
+                                        <p className="text-sm font-bold text-gray-900">{connectedUsers.get(selectedUser)?.datetime}</p>
                                     </div>
 
                                     <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200">
@@ -517,6 +558,54 @@ export default function DataPage() {
                                             </svg>
                                         </div>
                                         <p className="text-3xl font-bold text-gray-900">{connectedUsers.get(selectedUser)?.dsTemperature} <span className="text-xl">°C</span></p>
+                                    </div>
+
+                                    {/* ⬇️ NUEVO: Temp.OUT MAX */}
+                                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200 relative">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-red-700 uppercase tracking-wide">Temp.OUT MAX</span>
+                                            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                            </svg>
+                                        </div>
+                                        {loadingExtremes ? (
+                                            <div className="flex items-center justify-center h-10">
+                                                <svg className="animate-spin w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                            </div>
+                                        ) : (
+                                            <p className="text-3xl font-bold text-gray-900">
+                                                {tempExtremes.max !== null ? tempExtremes.max : '--'} <span className="text-xl">°C</span>
+                                            </p>
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                                            10min
+                                        </div>
+                                    </div>
+
+                                    {/* ⬇️ NUEVO: Temp.OUT MIN */}
+                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200 relative">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Temp.OUT MIN</span>
+                                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                                            </svg>
+                                        </div>
+                                        {loadingExtremes ? (
+                                            <div className="flex items-center justify-center h-10">
+                                                <svg className="animate-spin w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                </svg>
+                                            </div>
+                                        ) : (
+                                            <p className="text-3xl font-bold text-gray-900">
+                                                {tempExtremes.min !== null ? tempExtremes.min : '--'} <span className="text-xl">°C</span>
+                                            </p>
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                                            10min
+                                        </div>
                                     </div>
 
                                     <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-4 border border-rose-200">
