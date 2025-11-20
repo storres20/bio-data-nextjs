@@ -416,9 +416,9 @@ export default function HistoryPage() {
                                     <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                                         Hum.IN
                                     </th>
-                                    <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                    {/*<th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                                         Door Status
-                                    </th>
+                                    </th>*/}
                                 </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -442,7 +442,7 @@ export default function HistoryPage() {
                                                 {d.humidity} %
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                        {/*<td className="px-6 py-4 whitespace-nowrap text-center">
                                             {d.doorStatus === 'open' ? (
                                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
                                                     Open
@@ -456,7 +456,7 @@ export default function HistoryPage() {
                                                     Unknown
                                                 </span>
                                             )}
-                                        </td>
+                                        </td>*/}
                                     </tr>
                                 ))}
                                 </tbody>
