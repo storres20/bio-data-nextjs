@@ -1,3 +1,5 @@
+// data/page.js
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -12,6 +14,12 @@ export default function DataPage() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [selectedUserWarning, setSelectedUserWarning] = useState('');
     const [showInfoModal, setShowInfoModal] = useState(false);
+
+    // ⬇️ NUEVO: Estados para los datos del día
+    const [todayData, setTodayData] = useState([]);
+    const [loadingTodayData, setLoadingTodayData] = useState(false);
+    //
+
     const ws = useRef(null);
 
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
@@ -136,7 +144,58 @@ export default function DataPage() {
         return () => clearInterval(interval);
     }, []);
 
+    // ⬇️ NUEVO: useEffect para cargar datos del día actual
+    useEffect(() => {
+        const fetchTodayData = async () => {
+            if (!selectedUser || !connectedUsers.get(selectedUser)?.device) {
+                setTodayData([]);
+                return;
+            }
+
+            setLoadingTodayData(true);
+            try {
+                const deviceId = connectedUsers.get(selectedUser).device._id;
+
+                // Fecha de hoy en UTC-5 (Perú)
+                const now = new Date();
+                const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+
+                const fromDate = new Date(peruDate.setHours(0, 0, 0, 0)).toISOString();
+                const toDate = new Date(peruDate.setHours(23, 59, 59, 999)).toISOString();
+
+                const url = `${apiBase}/api/v1/datas/by-device/${deviceId}?from=${fromDate}&to=${toDate}`;
+                const response = await fetch(url);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setTodayData(data);
+                }
+            } catch (err) {
+                console.error('Error fetching today data:', err);
+                setTodayData([]);
+            } finally {
+                setLoadingTodayData(false);
+            }
+        };
+
+        fetchTodayData();
+
+        // Actualizar cada 2 minutos
+        const interval = setInterval(fetchTodayData, 120000);
+        return () => clearInterval(interval);
+    }, [selectedUser, connectedUsers, apiBase]);
+
     if (!hydrated || !user) return null;
+
+
+    const formatDateTime = (isoDatetime) => {
+        const formatter = new Intl.DateTimeFormat('es-PE', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: true, timeZone: 'America/Lima'
+        });
+        return formatter.format(new Date(isoDatetime));
+    };
 
     const getChartData = (label, data, color) => ({
         labels: connectedUsers.get(selectedUser)?.datetimeHistory || [],
@@ -481,6 +540,7 @@ export default function DataPage() {
                                     </div>
                                 </div>
 
+                                {/* Equipment Information */}
                                 {connectedUsers.get(selectedUser)?.device && (
                                     <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -510,6 +570,90 @@ export default function DataPage() {
                                     </div>
                                 )}
 
+                                {/* ⬇️ NUEVO: Today's Data Records */}
+                                {selectedUser && connectedUsers.get(selectedUser)?.device && (
+                                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    Today&apos;s 4-Hour Data Records
+                                                </h3>
+                                                {loadingTodayData && (
+                                                    <svg className="animate-spin w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                {todayData.length} entries recorded today
+                                            </p>
+                                        </div>
+
+                                        {todayData.length > 0 ? (
+                                            <div className="overflow-x-auto max-h-96">
+                                                <table className="min-w-full divide-y divide-gray-200">
+                                                    <thead className="bg-gray-50 sticky top-0">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                            Datetime (UTC-5)
+                                                        </th>
+                                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                            Temp.OUT
+                                                        </th>
+                                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                            Temp.IN
+                                                        </th>
+                                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                            Hum.IN
+                                                        </th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody className="bg-white divide-y divide-gray-200">
+                                                    {todayData.map((d, i) => (
+                                                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                {formatDateTime(d.datetime)}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                                                parseFloat(d.dsTemperature) > 6 || parseFloat(d.dsTemperature) < 2
+                                                                    ? 'bg-red-100 text-red-800'
+                                                                    : 'bg-cyan-100 text-cyan-800'
+                                                            }`}>
+                                                                {d.dsTemperature} °C
+                                                            </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-800">
+                                                                {d.temperature} °C
+                                                            </span>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
+                                                                {d.humidity} %
+                                                            </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="p-8 text-center">
+                                                <svg className="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                                <p className="text-gray-600 font-medium">No data recorded today</p>
+                                                <p className="text-sm text-gray-500 mt-1">Data will appear here as it&apos;s collected</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Charts */}
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-lg border border-gray-200 p-4">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
