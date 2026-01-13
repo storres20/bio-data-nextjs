@@ -1,5 +1,9 @@
 # MHUTEMP Frontend Application
 
+## Version 2026 - ESP32
+<img width="1920" height="1555" alt="image" src="https://github.com/user-attachments/assets/3cd21e0e-50ba-4685-8738-51d160d0c7db" />
+
+
 This is the frontend application of the **MHUTEMP** project, providing a real-time dashboard and historical data view for temperature and humidity monitoring.
 
 ## 🚀 Features
@@ -47,6 +51,8 @@ pnpm dev
 This project is licensed under the MIT License.  
 See the [LICENSE](https://github.com/storres20/bio-data-nextjs/blob/main/LICENSE.txt) file for more details.
 
+## Version 2025 - ESP8266
 ![temphuweb01](https://github.com/user-attachments/assets/870c6bcf-cf79-4070-8070-e88729208b78)
 
 ![temphuweb02](https://github.com/user-attachments/assets/898a73b8-ffe2-40b0-bf5e-bf582ad51f7f)
+
