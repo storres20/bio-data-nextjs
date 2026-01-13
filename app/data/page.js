@@ -1,4 +1,4 @@
-// data/page.js
+// data/page.js - VERSIÓN ACTUALIZADA CON MANEJO DE SENSORES DESCONECTADOS
 
 'use client';
 
@@ -14,19 +14,12 @@ export default function DataPage() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [selectedUserWarning, setSelectedUserWarning] = useState('');
     const [showInfoModal, setShowInfoModal] = useState(false);
-
-    // ⬇️ NUEVO: Estados para los datos del día
     const [todayData, setTodayData] = useState([]);
     const [loadingTodayData, setLoadingTodayData] = useState(false);
-    //
-
-    // ⬇️ NUEVO: Estados para temperaturas extremas
     const [tempExtremes, setTempExtremes] = useState({ min: null, max: null });
     const [loadingExtremes, setLoadingExtremes] = useState(false);
-    //
 
     const ws = useRef(null);
-
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_RAILWAY;
 
     useEffect(() => {
@@ -35,12 +28,21 @@ export default function DataPage() {
         }
     }, [hydrated, token]);
 
+    // ⬇️ FUNCIÓN MEJORADA: Manejar valores null
     const checkForWarnings = (latestTemp, latestHum, latestDsTemp) => {
         let message = '';
-        if (latestDsTemp > 6) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) exceeds maximum threshold (6°C). `;
-        if (latestDsTemp < 2) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) below minimum threshold (2°C). `;
-        if (latestHum > 90) message += `⚠️ Humidity (${latestHum}%) exceeds maximum threshold (90%). `;
-        if (latestHum < 30) message += `⚠️ Humidity (${latestHum}%) below minimum threshold (30%). `;
+
+        // Solo validar si el valor NO es null
+        if (latestDsTemp !== null) {
+            if (latestDsTemp > 6) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) exceeds maximum threshold (6°C). `;
+            if (latestDsTemp < 2) message += `⚠️ DS18B20 Temperature (${latestDsTemp}°C) below minimum threshold (2°C). `;
+        }
+
+        if (latestHum !== null) {
+            if (latestHum > 90) message += `⚠️ Humidity (${latestHum}%) exceeds maximum threshold (90%). `;
+            if (latestHum < 30) message += `⚠️ Humidity (${latestHum}%) below minimum threshold (30%). `;
+        }
+
         return message;
     };
 
@@ -60,11 +62,17 @@ export default function DataPage() {
         socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
 
-            if (
-                typeof data.temperature !== 'number' ||
-                typeof data.humidity !== 'number' ||
-                typeof data.dsTemperature !== 'number'
-            ) {
+            // ⬇️ CAMBIO: Permitir null, solo verificar que sean del tipo correcto
+            const hasValidData = (
+                typeof data.username === 'string' &&
+                typeof data.datetime === 'string' &&
+                (data.temperature === null || typeof data.temperature === 'number') &&
+                (data.humidity === null || typeof data.humidity === 'number') &&
+                (data.dsTemperature === null || typeof data.dsTemperature === 'number')
+            );
+
+            if (!hasValidData) {
+                console.warn('Datos inválidos recibidos:', data);
                 return;
             }
 
@@ -91,6 +99,19 @@ export default function DataPage() {
 
                 const MAX_CHART_POINTS = 10;
 
+                // ⬇️ NUEVO: Solo agregar a historial si el valor NO es null
+                const newTempHistory = data.temperature !== null
+                    ? [...existing.temperatureHistory.slice(-(MAX_CHART_POINTS - 1)), data.temperature]
+                    : existing.temperatureHistory;
+
+                const newHumidityHistory = data.humidity !== null
+                    ? [...existing.humidityHistory.slice(-(MAX_CHART_POINTS - 1)), data.humidity]
+                    : existing.humidityHistory;
+
+                const newDsTempHistory = data.dsTemperature !== null
+                    ? [...existing.dsTemperatureHistory.slice(-(MAX_CHART_POINTS - 1)), data.dsTemperature]
+                    : existing.dsTemperatureHistory;
+
                 updated.set(data.username, {
                     ...existing,
                     dsTemperature: data.dsTemperature,
@@ -102,14 +123,21 @@ export default function DataPage() {
                         hour: '2-digit', minute: '2-digit', second: '2-digit'
                     }),
                     lastUpdate: Date.now(),
-                    temperatureHistory: [...existing.temperatureHistory.slice(-(MAX_CHART_POINTS - 1)), data.temperature],
-                    humidityHistory: [...existing.humidityHistory.slice(-(MAX_CHART_POINTS - 1)), data.humidity],
-                    dsTemperatureHistory: [...existing.dsTemperatureHistory.slice(-(MAX_CHART_POINTS - 1)), data.dsTemperature],
-                    datetimeHistory: [...existing.datetimeHistory.slice(-(MAX_CHART_POINTS - 1)), new Date(data.datetime).toLocaleString('en-GB', {
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    })],
+                    temperatureHistory: newTempHistory,
+                    humidityHistory: newHumidityHistory,
+                    dsTemperatureHistory: newDsTempHistory,
+                    datetimeHistory: data.temperature !== null || data.dsTemperature !== null
+                        ? [...existing.datetimeHistory.slice(-(MAX_CHART_POINTS - 1)), new Date(data.datetime).toLocaleString('en-GB', {
+                            hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        })]
+                        : existing.datetimeHistory,
                     warningMessage: warning,
                     device: assignedDevice,
+                    // ⬇️ NUEVO: Indicadores de sensores activos
+                    sensorsActive: {
+                        dht: data.temperature !== null && data.humidity !== null,
+                        ds18b20: data.dsTemperature !== null
+                    }
                 });
 
                 return updated;
@@ -149,10 +177,8 @@ export default function DataPage() {
         return () => clearInterval(interval);
     }, []);
 
-    // ⬇️ NUEVO: useEffect para cargar datos del día actual
     useEffect(() => {
         const fetchTodayData = async () => {
-            // Verificar si existe device ID directamente
             const currentUserData = connectedUsers.get(selectedUser);
             if (!selectedUser || !currentUserData?.device?._id) {
                 setTodayData([]);
@@ -162,8 +188,6 @@ export default function DataPage() {
             setLoadingTodayData(true);
             try {
                 const deviceId = currentUserData.device._id;
-
-                // Fecha de hoy en UTC-5 (Perú)
                 const now = new Date();
                 const peruDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Lima' }));
 
@@ -186,13 +210,10 @@ export default function DataPage() {
         };
 
         fetchTodayData();
-
-        // Actualizar cada 2 minutos
         const interval = setInterval(fetchTodayData, 120000);
         return () => clearInterval(interval);
-    }, [selectedUser, apiBase]);  // ⬅️ QUITAR connectedUsers
+    }, [selectedUser, apiBase]);
 
-    // ⬇️ NUEVO: useEffect para temperaturas extremas (cada 10 minutos)
     useEffect(() => {
         const fetchTempExtremes = async () => {
             if (!selectedUser) {
@@ -218,14 +239,19 @@ export default function DataPage() {
         };
 
         fetchTempExtremes();
-
-        // Actualizar cada 10 minutos (600,000ms)
         const interval = setInterval(fetchTempExtremes, 600000);
         return () => clearInterval(interval);
     }, [selectedUser, apiBase]);
 
     if (!hydrated || !user) return null;
 
+    // ⬇️ FUNCIÓN AUXILIAR: Formatear valor o mostrar ERROR
+    const formatSensorValue = (value, unit = '') => {
+        if (value === null || value === undefined) {
+            return <span className="text-red-600 font-bold">ERROR</span>;
+        }
+        return `${value}${unit}`;
+    };
 
     const formatDateTime = (isoDatetime) => {
         const formatter = new Intl.DateTimeFormat('es-PE', {
@@ -537,8 +563,6 @@ export default function DataPage() {
                                     );
                                 })()}
 
-                                {/* CARDS */}
-                                {/* ⬇️ MODIFICADO: Grid con 6 columnas (4 existentes + 2 nuevas) */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
                                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                                         <div className="flex items-center justify-between mb-2">
@@ -557,10 +581,9 @@ export default function DataPage() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
                                             </svg>
                                         </div>
-                                        <p className="text-3xl font-bold text-gray-900">{connectedUsers.get(selectedUser)?.dsTemperature} <span className="text-xl">°C</span></p>
+                                        <p className="text-3xl font-bold text-gray-900">{formatSensorValue(connectedUsers.get(selectedUser)?.dsTemperature, ' °C')}</p>
                                     </div>
 
-                                    {/* ⬇️ NUEVO: Temp.OUT MAX */}
                                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 relative">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-semibold text-red-700 uppercase tracking-wide">Temp.OUT MAX</span>
@@ -584,7 +607,6 @@ export default function DataPage() {
                                         </div>
                                     </div>
 
-                                    {/* ⬇️ NUEVO: Temp.OUT MIN */}
                                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 relative">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Temp.OUT MIN</span>
@@ -615,7 +637,7 @@ export default function DataPage() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                                             </svg>
                                         </div>
-                                        <p className="text-3xl font-bold text-gray-900">{connectedUsers.get(selectedUser)?.temperature} <span className="text-xl">°C</span></p>
+                                        <p className="text-3xl font-bold text-gray-900">{formatSensorValue(connectedUsers.get(selectedUser)?.temperature, ' °C')}</p>
                                     </div>
 
                                     <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
@@ -625,11 +647,10 @@ export default function DataPage() {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                                             </svg>
                                         </div>
-                                        <p className="text-3xl font-bold text-gray-900">{connectedUsers.get(selectedUser)?.humidity} <span className="text-xl">%</span></p>
+                                        <p className="text-3xl font-bold text-gray-900">{formatSensorValue(connectedUsers.get(selectedUser)?.humidity, ' %')}</p>
                                     </div>
                                 </div>
 
-                                {/* Equipment Information */}
                                 {connectedUsers.get(selectedUser)?.device && (
                                     <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -659,9 +680,8 @@ export default function DataPage() {
                                     </div>
                                 )}
 
-                                {/* ⬇️ NUEVO: Today's Data Records */}
                                 {selectedUser && connectedUsers.get(selectedUser)?.device && (
-                                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-6">
                                         <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -708,21 +728,27 @@ export default function DataPage() {
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                                                                parseFloat(d.dsTemperature) > 6 || parseFloat(d.dsTemperature) < 2
-                                                                    ? 'bg-red-100 text-red-800'
-                                                                    : 'bg-cyan-100 text-cyan-800'
+                                                                d.dsTemperature === null
+                                                                    ? 'bg-gray-100 text-gray-800'
+                                                                    : (parseFloat(d.dsTemperature) > 6 || parseFloat(d.dsTemperature) < 2)
+                                                                        ? 'bg-red-100 text-red-800'
+                                                                        : 'bg-cyan-100 text-cyan-800'
                                                             }`}>
-                                                                {d.dsTemperature} °C
+                                                                {d.dsTemperature !== null ? `${d.dsTemperature} °C` : 'N/A'}
                                                             </span>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-rose-100 text-rose-800">
-                                                                {d.temperature} °C
+                                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                                                d.temperature === null ? 'bg-gray-100 text-gray-800' : 'bg-rose-100 text-rose-800'
+                                                            }`}>
+                                                                {d.temperature !== null ? `${d.temperature} °C` : 'N/A'}
                                                             </span>
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-800">
-                                                                {d.humidity} %
+                                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                                                                d.humidity === null ? 'bg-gray-100 text-gray-800' : 'bg-indigo-100 text-indigo-800'
+                                                            }`}>
+                                                                {d.humidity !== null ? `${d.humidity} %` : 'N/A'}
                                                             </span>
                                                             </td>
                                                         </tr>
@@ -742,7 +768,6 @@ export default function DataPage() {
                                     </div>
                                 )}
 
-                                {/* Charts */}
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-lg border border-gray-200 p-4">
                                         <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -819,15 +844,16 @@ export default function DataPage() {
                                 .filter(([user]) => user.toLowerCase().includes(searchQuery))
                                 .map(([user, data]) => {
                                     const hasWarning = data.warningMessage;
-                                    const isCriticalTemp = data.dsTemperature > 6 || data.dsTemperature < 2;
+                                    const isCriticalTemp = data.dsTemperature !== null && (data.dsTemperature > 6 || data.dsTemperature < 2);
                                     const doorConfig = getDoorStatusConfig(data.doorStatus);
                                     const isDoorOpen = data.doorStatus === 'open';
+                                    const hasSensorError = data.dsTemperature === null || data.temperature === null || data.humidity === null;
 
                                     return (
                                         <div
                                             key={user}
                                             className={`group relative rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer hover:shadow-xl hover:scale-[1.02] overflow-hidden ${
-                                                hasWarning || isDoorOpen
+                                                hasWarning || isDoorOpen || hasSensorError
                                                     ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-400 hover:border-red-500'
                                                     : 'bg-white border-gray-200 hover:border-blue-400'
                                             }`}
@@ -836,12 +862,12 @@ export default function DataPage() {
                                                 setSelectedUserWarning(data.warningMessage);
                                             }}
                                         >
-                                            {(hasWarning || isDoorOpen) && (
+                                            {(hasWarning || isDoorOpen || hasSensorError) && (
                                                 <div className="absolute top-0 right-0 bg-red-600 text-white px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1 shadow-lg animate-pulse">
                                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                                     </svg>
-                                                    ALERT
+                                                    {hasSensorError ? 'SENSOR ERROR' : 'ALERT'}
                                                 </div>
                                             )}
 
@@ -861,7 +887,7 @@ export default function DataPage() {
                                                             {data.datetime}
                                                         </p>
                                                     </div>
-                                                    <div className={`w-3 h-3 rounded-full ${hasWarning || isDoorOpen ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
+                                                    <div className={`w-3 h-3 rounded-full ${hasWarning || isDoorOpen || hasSensorError ? 'bg-red-500' : 'bg-green-500'} animate-pulse`}></div>
                                                 </div>
 
                                                 <div className={`${doorConfig.bgColor} ${doorConfig.borderColor} border-2 rounded-lg p-3 mb-3 ${doorConfig.pulse ? 'animate-pulse' : ''}`}>
@@ -884,29 +910,77 @@ export default function DataPage() {
                                                 </div>
 
                                                 <div className="space-y-3 mb-4">
-                                                    <div className={`rounded-lg p-3 ${isCriticalTemp ? 'bg-red-100 border border-red-300' : 'bg-cyan-50 border border-cyan-200'}`}>
+                                                    <div className={`rounded-lg p-3 ${
+                                                        data.dsTemperature === null
+                                                            ? 'bg-red-100 border border-red-300'
+                                                            : isCriticalTemp
+                                                                ? 'bg-red-100 border border-red-300'
+                                                                : 'bg-cyan-50 border border-cyan-200'
+                                                    }`}>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-xs font-semibold text-gray-700 uppercase">Temp.OUT</span>
+                                                            <span className="text-xs font-semibold text-gray-700 uppercase flex items-center gap-2">
+                                                                Temp.OUT
+                                                                {data.dsTemperature === null && (
+                                                                    <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                )}
+                                                            </span>
                                                             <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
                                                             </svg>
                                                         </div>
-                                                        <p className={`text-2xl font-bold mt-1 ${isCriticalTemp ? 'text-red-700' : 'text-gray-900'}`}>
-                                                            {data.dsTemperature} <span className="text-sm">°C</span>
+                                                        <p className={`text-2xl font-bold mt-1 ${
+                                                            data.dsTemperature === null
+                                                                ? 'text-red-700'
+                                                                : isCriticalTemp
+                                                                    ? 'text-red-700'
+                                                                    : 'text-gray-900'
+                                                        }`}>
+                                                            {formatSensorValue(data.dsTemperature, ' °C')}
                                                         </p>
-                                                        {isCriticalTemp && (
+                                                        {data.dsTemperature === null && (
+                                                            <p className="text-xs text-red-700 mt-1 font-medium">Disconnected sensor</p>
+                                                        )}
+                                                        {data.dsTemperature !== null && isCriticalTemp && (
                                                             <p className="text-xs text-red-700 mt-1 font-medium">Out of range (2-6°C)</p>
                                                         )}
                                                     </div>
 
                                                     <div className="grid grid-cols-2 gap-3">
-                                                        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                                                            <span className="text-xs font-semibold text-gray-700 uppercase block mb-1">Temp.IN</span>
-                                                            <p className="text-xl font-bold text-gray-900">{data.temperature} <span className="text-xs">°C</span></p>
+                                                        <div className={`rounded-lg p-3 ${
+                                                            data.temperature === null
+                                                                ? 'bg-red-100 border border-red-300'
+                                                                : 'bg-rose-50 border border-rose-200'
+                                                        }`}>
+                                                            <span className="text-xs font-semibold text-gray-700 uppercase block mb-1 flex items-center gap-1">
+                                                                Temp.IN
+                                                                {data.temperature === null && (
+                                                                    <svg className="w-3 h-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                )}
+                                                            </span>
+                                                            <p className={`text-xl font-bold ${data.temperature === null ? 'text-red-700' : 'text-gray-900'}`}>
+                                                                {formatSensorValue(data.temperature, ' °C')}
+                                                            </p>
                                                         </div>
-                                                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                                                            <span className="text-xs font-semibold text-gray-700 uppercase block mb-1">Hum.IN</span>
-                                                            <p className="text-xl font-bold text-gray-900">{data.humidity} <span className="text-xs">%</span></p>
+                                                        <div className={`rounded-lg p-3 ${
+                                                            data.humidity === null
+                                                                ? 'bg-red-100 border border-red-300'
+                                                                : 'bg-indigo-50 border border-indigo-200'
+                                                        }`}>
+                                                            <span className="text-xs font-semibold text-gray-700 uppercase block mb-1 flex items-center gap-1">
+                                                                Hum.IN
+                                                                {data.humidity === null && (
+                                                                    <svg className="w-3 h-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                )}
+                                                            </span>
+                                                            <p className={`text-xl font-bold ${data.humidity === null ? 'text-red-700' : 'text-gray-900'}`}>
+                                                                {formatSensorValue(data.humidity, ' %')}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 </div>
